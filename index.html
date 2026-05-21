@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CRM Mobile Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Chart.js pour les graphiques réels -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- SheetJS pour l'import/export Excel -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- Supabase CDN -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .pwa-badge { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased pb-20">
+
+    <!-- ÉCRAN DE CONNEXION / INSCRIPTION -->
+    <div id="auth-screen" class="min-h-screen flex flex-col justify-center items-center px-4 bg-gradient-to-br from-blue-600 to-indigo-900">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
+            <div class="text-center mb-6">
+                <span class="text-4xl">🚀</span>
+                <h1 class="text-2xl font-bold text-gray-800 mt-2">CRM Mobile</h1>
+                <p class="text-sm text-gray-500">Prospection & Base de données</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Email</label>
+                    <input type="email" id="auth-email" class="w-full mt-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="votre@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase">Mot de passe</label>
+                    <input type="password" id="auth-password" class="w-full mt-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="••••••••">
+                </div>
+                
+                <button id="btn-login" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold active:scale-95 transition text-base mt-2">Se connecter</button>
+                <button id="btn-signup" class="w-full bg-gray-100 text-gray-700 p-3 rounded-xl font-semibold active:scale-95 transition text-sm">Créer un compte utilisateur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION PRINCIPALE (Masquée par défaut) -->
+    <div id="app-screen" class="hidden">
+        <!-- Barre supérieure -->
+        <header class="bg-white border-b border-gray-100 sticky top-0 z-40 px-4 py-3 flex justify-between items-center shadow-xs">
+            <div>
+                <h2 class="font-bold text-lg text-gray-800" id="user-role-display">CRM Client</h2>
+                <p class="text-xs text-gray-400" id="network-status">🟢 En ligne</p>
+            </div>
+            <button id="btn-logout" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl text-xs font-bold">Quitter</button>
+        </header>
+
+        <!-- CONTENU DYNAMIQUE -->
+        <main class="p-4 max-w-md mx-auto" id="main-content">
+            
+            <!-- SECTION 1 : DASHBOARD (ADMIN UNIQUEMENT VIA FILTRE JS) -->
+            <div id="view-dashboard" class="space-y-4 tab-view">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
+                        <p class="text-xs font-medium text-gray-400 uppercase">Total Leads</p>
+                        <p class="text-2xl font-black text-blue-600 mt-1" id="stat-total">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
+                        <p class="text-xs font-medium text-gray-400 uppercase">Clients Signés</p>
+                        <p class="text-2xl font-black text-green-600 mt-1" id="stat-clients">0</p>
+                    </div>
+                </div>
+
+                <!-- Graphique Réel -->
+                <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
+                    <h3 class="text-sm font-bold text-gray-700 mb-3">Pipeline de Prospection</h3>
+                    <div class="h-48">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Actions d'import/export de l'admin -->
+                <div id="admin-actions" class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100 space-y-3 hidden">
+                    <h3 class="text-sm font-bold text-gray-700">Outils Administrateur</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="bg-blue-50 text-blue-600 p-3 rounded-xl text-center text-xs font-bold cursor-pointer active:bg-blue-100 block">
+                            📥 Importer (.csv/.xlsx)
+                            <input type="file" id="import-file" class="hidden" accept=".csv, .xlsx, .txt">
+                        </label>
+                        <button id="btn-export" class="bg-green-50 text-green-600 p-3 rounded-xl text-xs font-bold active:bg-green-100">📤 Exporter (.xlsx)</button>
+                    </div>
+                </div>
+
+                <!-- Module Assistant IA -->
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-2xl shadow-sm">
+                    <div class="flex items-center space-x-2">
+                        <span>💡</span>
+                        <h4 class="font-bold text-sm">Assistant CRM IA</h4>
+                    </div>
+                    <p class="text-xs text-purple-100 mt-1" id="ia-suggestion">Analyse de la base de données en cours...</p>
+                </div>
+            </div>
+
+            <!-- SECTION 2 : LISTE DES CONTACTS (ACCESSIBLE À TOUS) -->
+            <div id="view-contacts" class="space-y-3 tab-view hidden">
+                <div class="flex space-x-2">
+                    <input type="text" id="search-input" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none" placeholder="Rechercher un nom ou téléphone...">
+                </div>
+                
+                <!-- Liste injectée par JS -->
+                <div class="space-y-2" id="contacts-container">
+                    <p class="text-center text-sm text-gray-400 py-8">Aucun contact trouvé.</p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- MENU DE NAVIGATION BASSE (STYLE MOBILE APP) -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-16 flex items-center justify-around px-6 z-40 shadow-lg">
+            <button onclick="switchTab('dashboard')" class="flex flex-col items-center justify-center text-blue-600" id="nav-dashboard">
+                <span class="text-xl">📊</span>
+                <span class="text-[10px] font-bold mt-0.5">Dashboard</span>
+            </button>
+            <button onclick="switchTab('contacts')" class="flex flex-col items-center justify-center text-gray-400" id="nav-contacts">
+                <span class="text-xl">👥</span>
+                <span class="text-[10px] font-bold mt-0.5">Contacts</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODAL DE FICHE CLIENT ET GÉNÉRATEUR IA -->
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+        <div class="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black text-gray-800" id="modal-name">Chargement...</h3>
+                    <p class="text-xs text-gray-400" id="modal-company"></p>
+                </div>
+                <button onclick="closeModal()" class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <div class="space-y-2">
+                <p class="text-xs font-bold text-gray-400 uppercase">Coordonnées</p>
+                <div class="bg-gray-50 p-3 rounded-xl text-sm space-y-1">
+                    <p>📱 Téléphone: <span id="modal-phone" class="font-semibold"></span></p>
+                    <p>📧 Email: <span id="modal-email" class="font-semibold"></span></p>
+                </div>
+            </div>
+
+            <!-- Changement de statut de prospection -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Statut de prospection</label>
+                <select id="modal-status-select" class="w-full p-3 bg-gray-50 rounded-xl text-sm font-semibold border-0">
+                    <option value="Lead">Lead (Nouveau)</option>
+                    <option value="A rappeler">À rappeler</option>
+                    <option value="Pas interesse">Pas intéressé</option>
+                    <option value="Client">Client signé</option>
+                </select>
+            </div>
+
+            <!-- Module de messagerie automatisée par l'IA -->
+            <div class="border-t border-gray-100 pt-3 space-y-2">
+                <p class="text-xs font-bold text-purple-600 uppercase flex items-center">✨ Générateur de Message IA</p>
+                <button onclick="generateIAMessage()" class="w-full bg-purple-50 text-purple-600 p-2.5 rounded-xl text-xs font-bold active:bg-purple-100">
+                    🪄 Rédiger un texte de relance ciblé
+                </button>
+                <textarea id="ia-message-output" class="w-full p-3 bg-purple-50/50 rounded-xl text-xs border border-purple-100 hidden h-24 focus:outline-none" placeholder="Le texte généré apparaîtra ici..."></textarea>
+                
+                <!-- Boutons d'action natifs du téléphone -->
+                <div id="messaging-actions" class="grid grid-cols-3 gap-2 hidden">
+                    <button onclick="sendAction('sms')" class="bg-blue-50 text-blue-600 p-2 rounded-xl text-xs font-bold text-center">SMS</button>
+                    <button onclick="sendAction('whatsapp')" class="bg-green-50 text-green-600 p-2 rounded-xl text-xs font-bold text-center">WhatsApp</button>
+                    <button onclick="sendAction('email')" class="bg-gray-100 text-gray-700 p-2 rounded-xl text-xs font-bold text-center">Email</button>
+                </div>
+            </div>
+
+            <button onclick="saveContactChanges()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold text-sm active:scale-95 transition">Enregistrer les modifications</button>
+        </div>
+    </div>
+
+    <!-- CODE LOGIQUE ET INTEGRATION SUPABASE -->
+    <script>
+        // Configuration injectée automatiquement
+        const SUPABASE_URL = "https://supabase.co";
+        const SUPABASE_KEY = "sb_publishable_or9nFB9PectQNg5BFtTrAQ_UuX_tBB2";
+        const ADMIN_EMAIL = "elaidi.aziz10.if@gmail.com";
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let currentUser = null;
+        let isAdmin = false;
+        let contactsData = [];
+        let currentContactId = null;
+        let chartInstance = null;
+
+        // Éléments DOM
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        
+        // Initialisation de l'authentification
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) alert("Erreur d'authentification: " + error.message);
+            else checkSession();
+        });
+
+        document.getElementById('btn-signup').addEventListener('click', async () => {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) alert("Erreur d'inscription: " + error.message);
+            else alert("Compte utilisateur créé avec succès ! Connectez-vous.");
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            location.reload();
+        });
+
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                isAdmin = (currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+                
+                authScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                
+                document.getElementById('user-role-display').innerText = isAdmin ? "👑 Espace Admin" : "👥 Espace Équipe";
+                if (isAdmin) document.getElementById('admin-actions').classList.remove('hidden');
+                
+                // Vérifier la structure de la table et charger
+                await setupDatabaseStructure();
+                loadLocalOrCloudData();
+            }
+        }
+
+        // Créer automatiquement la table si elle n'existe pas (Mode Fail-Safe)
+        async function setupDatabaseStructure() {
+            // Dans une vraie app, Supabase requiert des requêtes SQL pour créer les tables. 
+            // Nous supposons la table 'contacts' existante avec : id, name, email, phone, company, status, updated_at
+        }
+
+        // Chargement des données avec support Offline (LocalStorage)
+        async function loadLocalOrCloudData() {
+            if (navigator.onLine) {
+                document.getElementById('network-status').innerText = "🟢 En ligne";
+                const { data, error } = await supabase.from('contacts').select('*').order('name');
+                if (!error && data) {
+                    contactsData = data;
+                    localStorage.setItem('cached_contacts', JSON.stringify(data));
+                }
+            } else {
+                document.getElementById('network-status').innerText = "🔴 Mode Hors-ligne";
+                contactsData = JSON.parse(localStorage.getItem('cached_contacts')) || [];
+            }
+            updateDashboard();
+            renderContacts(contactsData);
+        }
+
+        // Rendu visuel de la liste des contacts optimisé pour le tactile mobile
+        function renderContacts(list) {
+            const container = document.getElementById('contacts-container');
+            if (list.length === 0) {
+                container.innerHTML = '<p class="text-center text-sm text-gray-400 py-8">Aucun contact disponible.</p>';
+                return;
+            }
+            container.innerHTML = '';
+            list.forEach(c => {
+                const badgeColor = c.status === 'Client' ? 'bg-green-100 text-green-700' : c.status === 'Pas interesse' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700';
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex justify-between items-center active:bg-gray-50";
+                div.onclick = () => openContactModal(c.id);
+                div.innerHTML = `
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-base">${c.name || 'Sans nom'}</h4>
+                        <p class="text-xs text-gray-400">${c.company || 'Aucune entreprise'} • ${c.phone || 'Pas de numéro'}</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-full font-bold ${badgeColor}">${c.status || 'Lead'}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Recherche en temps réel
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            const filtered = contactsData.filter(c => 
+                (c.name && c.name.toLowerCase().includes(val)) || 
+                (c.phone && c.phone.includes(val))
+            );
+            renderContacts(filtered);
+        });
+
+        // Ouvrir le panneau de détails du prospect
+        function openContactModal(id) {
+            const c = contactsData.find(item => item.id === id);
+            if (!c) return;
+            currentContactId = id;
+            
+            document.getElementById('modal-name').innerText = c.name || '';
+            document.getElementById('modal-company').innerText = c.company || '';
+            document.getElementById('modal-phone').innerText = c.phone || '';
+            document.getElementById('modal-email').innerText = c.email || '';
+            document.getElementById('modal-status-select').value = c.status || 'Lead';
+            
+            // Réinitialiser la zone IA
+            document.getElementById('ia-message-output').classList.add('hidden');
+            document.getElementById('messaging-actions').classList.add('hidden');
+            
+            document.getElementById('contact-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('contact-modal').classList.add('hidden');
+        }
+
+        // Sauvegarder les modifications du contact
+        async function saveContactChanges() {
+            const newStatus = document.getElementById('modal-status-select').value;
+            const index = contactsData.findIndex(item => item.id === currentContactId);
+            
+            if (index !== -1) {
+                contactsData[index].status = newStatus;
+                
+                if (navigator.onLine) {
+                    await supabase.from('contacts').update({ status: newStatus }).eq('id', currentContactId);
+                } else {
+                    // File d'attente offline
+                    let offlineActions = JSON.parse(localStorage.getItem('offline_updates')) || [];
+                    offlineActions.push({ id: currentContactId, status: newStatus });
+                    localStorage.setItem('offline_updates', JSON.stringify(offlineActions));
+                }
+                
+                localStorage.setItem('cached_contacts', JSON.stringify(contactsData));
+                closeModal();
+                updateDashboard();
+                renderContacts(contactsData);
+            }
+        }
+
+        // Générateur de message intelligent basé sur le profil du prospect
+        function generateIAMessage() {
+            const c = contactsData.find(item => item.id === currentContactId);
+            const status = document.getElementById('modal-status-select').value;
+            
+            let message = "";
+            if (status === 'Lead') {
+                message = `Bonjour ${c.name}, j'ai découvert votre entreprise ${c.company}. Êtes-vous disponible cette semaine pour échanger brièvement par téléphone ? Cordialement.`;
+            } else if (status === 'A rappeler') {
+                message = `Bonjour ${c.name}, comme convenu lors de notre dernier appel, je me permets de vous recontacter pour faire le point sur votre projet.`;
+            } else {
+                message = `Bonjour ${c.name}, ravi de vous compter parmi nos partenaires officiels !`;
+            }
+            
+            const textarea = document.getElementById('ia-message-output');
+            textarea.value = message;
+            textarea.classList.remove('hidden');
+            document.getElementById('messaging-actions').classList.remove('hidden');
+        }
+
+        // Actions natives de communication (Ouvre directement les apps du téléphone)
+        function sendAction(type) {
+            const c = contactsData.find(item => item.id === currentContactId);
+            const msg = encodeURIComponent(document.getElementById('ia-message-output').value);
+            
+            if (type === 'sms') {
+                window.location.href = `sms:${c.phone}?body=${msg}`;
+            } else if (type === 'whatsapp') {
+                window.location.href = `https://wa.me{c.phone}?text=${msg}`;
+            } else if (type === 'email') {
+                window.location.href = `mailto:${c.email}?subject=Prospection&body=${msg}`;
+            }
+        }
+
+        // Traitement du Dashboard et des graphiques réels
+        function updateDashboard() {
+            const total = contactsData.length;
+            const clients = contactsData.filter(c => c.status === 'Client').length;
+            const leads = contactsData.filter(c => c.status === 'Lead').length;
+            const recall = contactsData.filter(c => c.status === 'A rappeler').length;
+            
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-clients').innerText = clients;
+            
+            // Suggestion dynamique de l'IA pour le Dashboard
+            const pendingRecall = contactsData.find(c => c.status === 'A rappeler');
+            if (pendingRecall) {
+                document.getElementById('ia-suggestion').innerText = `🔥 Priorité : Relancer ${pendingRecall.name} (${pendingRecall.phone}) aujourd'hui !`;
+            } else if (leads > 0) {
+                document.getElementById('ia-suggestion').innerText = `⚡ Vous avez ${leads} nouveaux leads non contactés à appeler.`;
+            } else {
+                document.getElementById('ia-suggestion').innerText = `🎉 Tous vos prospects sont à jour ! Intégrez de nouvelles listes.`;
+            }
+
+            // Génération du graphique Chart.js
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Leads', 'A rappeler', 'Clients'],
+                    datasets: [{
+                        data: [leads, recall, clients],
+                        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+                }
+            });
+        }
+
+        // Gestion de l'import de gros fichiers (5 000 contacts max)
+        document.getElementById('import-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const data = e.target.result;
+                let importedContacts = [];
+
+                if (file.name.endsWith('.xlsx')) {
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                    importedContacts = json.map(row => ({
+                        name: row.Nom || row.name || 'Inconnu',
+                        email: row.Email || row.email || '',
+                        phone: String(row.Telephone || row.phone || row.Téléphone || ''),
+                        company: row.Societe || row.company || row.Société || '',
+                        status: row.Statut || row.status || 'Lead'
+                    }));
+                } else {
+                    // Traitement texte / CSV de base
+                    const lines = data.split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
+                        const cols = lines[i].split(/[,;]/);
+                        importedContacts.push({
+                            name: cols[0]?.replace(/"/g, '') || 'Inconnu',
+                            email: cols[1]?.trim() || '',
+                            phone: cols[2]?.trim() || '',
+                            company: cols[3]?.trim() || '',
+                            status: cols[4]?.trim() || 'Lead'
+                        });
+                    }
+                }
+
+                if (importedContacts.length > 0) {
+                    alert(`Analyse terminée. Importation de ${importedContacts.length} contacts sur le serveur en cours...`);
+                    const { error } = await supabase.from('contacts').insert(importedContacts);
+                    if (error) alert("Erreur d'envoi cloud : " + error.message);
+                    else {
+                        alert("Synchronisation cloud réussie !");
+                        loadLocalOrCloudData();
+                    }
+                }
+            };
+
+            if (file.name.endsWith('.xlsx')) reader.readAsBinaryString(file);
+            else reader.readAsText(file);
+        });
+
+        // Gestion de l'export Excel réel
+        document.getElementById('btn-export').addEventListener('click', () => {
+            if (contactsData.length === 0) return alert("Aucune donnée à exporter.");
+            const worksheet = XLSX.utils.json_to_sheet(contactsData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Contacts");
+            XLSX.writeFile(workbook, `Export_CRM_${new Date().toISOString().slice(0,10)}.xlsx`);
+        });
+
+        // Changement d'onglets (Navigation Mobile)
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            
+            document.getElementById('nav-dashboard').className = tab === 'dashboard' ? 'flex flex-col items-center justify-center text-blue-600' : 'flex flex-col items-center justify-center text-gray-400';
+            document.getElementById('nav-contacts').className = tab === 'contacts' ? 'flex flex-col items-center justify-center text-blue-600' : 'flex flex-col items-center justify-center text-gray-400';
+        }
+
+        // Écouteurs de connexion réseau pour synchronisation automatique
+        window.addEventListener('online', async () => {
+            document.getElementById('network-status').innerText = "🟢 En ligne";
+            let offlineActions = JSON.parse(localStorage.getItem('offline_updates')) || [];
+            if (offlineActions.length > 0) {
+                for (let act of offlineActions) {
+                    await supabase.from('contacts').update({ status: act.status }).eq('id', act.id);
+                }
+                localStorage.removeItem('offline_updates');
+                alert("Synchronisation des modifications hors-ligne effectuée !");
+            }
+            loadLocalOrCloudData();
+        });
+        window.addEventListener('offline', () => {
+            document.getElementById('network-status').innerText = "🔴 Mode Hors-ligne";
+        });
+
+        // Lancement initial au démarrage de la page
+        window.onload = checkSession;
+    </script>
+</body>
+</html>

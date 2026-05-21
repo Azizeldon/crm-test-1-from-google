@@ -1,511 +1,496 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CRM Mobile Pro</title>
-    <!-- Tailwind CSS -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- Chart.js pour les graphiques réels -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- SheetJS pour l'import/export Excel -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- Supabase CDN -->
-    <script src="https://jsdelivr.net"></script>
-    <style>
-        body { -webkit-tap-highlight-color: transparent; }
-        .pwa-badge { display: none; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CRM Pro - PWA</title>
+  <!-- Tailwind CSS + Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Chart.js & XLSX & Supabase & localForage -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+  <style>
+    /* animations tactiles */
+    .btn-tap:active { transform: scale(0.97); transition: transform 0.05s; }
+    .toast-notif { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #1f2937; color: white; padding: 12px; border-radius: 20px; z-index: 50; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }
+    .kanban-card { transition: all 0.2s; }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased pb-20">
+<body class="bg-gray-100 font-sans antialiased">
 
-    <!-- ÉCRAN DE CONNEXION / INSCRIPTION -->
-    <div id="auth-screen" class="min-h-screen flex flex-col justify-center items-center px-4 bg-gradient-to-br from-blue-600 to-indigo-900">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
-            <div class="text-center mb-6">
-                <span class="text-4xl">🚀</span>
-                <h1 class="text-2xl font-bold text-gray-800 mt-2">CRM Mobile</h1>
-                <p class="text-sm text-gray-500">Prospection & Base de données</p>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase">Email</label>
-                    <input type="email" id="auth-email" class="w-full mt-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="votre@email.com">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase">Mot de passe</label>
-                    <input type="password" id="auth-password" class="w-full mt-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base" placeholder="••••••••">
-                </div>
-                
-                <button id="btn-login" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold active:scale-95 transition text-base mt-2">Se connecter</button>
-                <button id="btn-signup" class="w-full bg-gray-100 text-gray-700 p-3 rounded-xl font-semibold active:scale-95 transition text-sm">Créer un compte utilisateur</button>
-            </div>
+  <!-- Conteneur principal -->
+  <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-xl relative pb-20">
+    <!-- Header dynamique -->
+    <div id="header" class="bg-indigo-700 text-white p-4 sticky top-0 z-10 shadow">
+      <div class="flex justify-between items-center">
+        <h1 class="text-xl font-bold"><i class="fas fa-chart-line mr-2"></i>CRM Pro</h1>
+        <div id="userMenu" class="flex gap-3">
+          <span id="userRoleBadge" class="bg-indigo-900 px-2 py-1 rounded text-xs"></span>
+          <button id="logoutBtn" class="bg-red-500 px-3 py-1 rounded text-sm btn-tap hidden"><i class="fas fa-sign-out-alt"></i></button>
         </div>
+      </div>
     </div>
 
-    <!-- APPLICATION PRINCIPALE (Masquée par défaut) -->
-    <div id="app-screen" class="hidden">
-        <!-- Barre supérieure -->
-        <header class="bg-white border-b border-gray-100 sticky top-0 z-40 px-4 py-3 flex justify-between items-center shadow-xs">
-            <div>
-                <h2 class="font-bold text-lg text-gray-800" id="user-role-display">CRM Client</h2>
-                <p class="text-xs text-gray-400" id="network-status">🟢 En ligne</p>
-            </div>
-            <button id="btn-logout" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-xl text-xs font-bold">Quitter</button>
-        </header>
+    <!-- Contenu des vues -->
+    <div id="view-container" class="p-4"></div>
 
-        <!-- CONTENU DYNAMIQUE -->
-        <main class="p-4 max-w-md mx-auto" id="main-content">
-            
-            <!-- SECTION 1 : DASHBOARD (ADMIN UNIQUEMENT VIA FILTRE JS) -->
-            <div id="view-dashboard" class="space-y-4 tab-view">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
-                        <p class="text-xs font-medium text-gray-400 uppercase">Total Leads</p>
-                        <p class="text-2xl font-black text-blue-600 mt-1" id="stat-total">0</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
-                        <p class="text-xs font-medium text-gray-400 uppercase">Clients Signés</p>
-                        <p class="text-2xl font-black text-green-600 mt-1" id="stat-clients">0</p>
-                    </div>
-                </div>
-
-                <!-- Graphique Réel -->
-                <div class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3">Pipeline de Prospection</h3>
-                    <div class="h-48">
-                        <canvas id="analyticsChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Actions d'import/export de l'admin -->
-                <div id="admin-actions" class="bg-white p-4 rounded-2xl shadow-xs border border-gray-100 space-y-3 hidden">
-                    <h3 class="text-sm font-bold text-gray-700">Outils Administrateur</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="bg-blue-50 text-blue-600 p-3 rounded-xl text-center text-xs font-bold cursor-pointer active:bg-blue-100 block">
-                            📥 Importer (.csv/.xlsx)
-                            <input type="file" id="import-file" class="hidden" accept=".csv, .xlsx, .txt">
-                        </label>
-                        <button id="btn-export" class="bg-green-50 text-green-600 p-3 rounded-xl text-xs font-bold active:bg-green-100">📤 Exporter (.xlsx)</button>
-                    </div>
-                </div>
-
-                <!-- Module Assistant IA -->
-                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-2xl shadow-sm">
-                    <div class="flex items-center space-x-2">
-                        <span>💡</span>
-                        <h4 class="font-bold text-sm">Assistant CRM IA</h4>
-                    </div>
-                    <p class="text-xs text-purple-100 mt-1" id="ia-suggestion">Analyse de la base de données en cours...</p>
-                </div>
-            </div>
-
-            <!-- SECTION 2 : LISTE DES CONTACTS (ACCESSIBLE À TOUS) -->
-            <div id="view-contacts" class="space-y-3 tab-view hidden">
-                <div class="flex space-x-2">
-                    <input type="text" id="search-input" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none" placeholder="Rechercher un nom ou téléphone...">
-                </div>
-                
-                <!-- Liste injectée par JS -->
-                <div class="space-y-2" id="contacts-container">
-                    <p class="text-center text-sm text-gray-400 py-8">Aucun contact trouvé.</p>
-                </div>
-            </div>
-
-        </main>
-
-        <!-- MENU DE NAVIGATION BASSE (STYLE MOBILE APP) -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-16 flex items-center justify-around px-6 z-40 shadow-lg">
-            <button onclick="switchTab('dashboard')" class="flex flex-col items-center justify-center text-blue-600" id="nav-dashboard">
-                <span class="text-xl">📊</span>
-                <span class="text-[10px] font-bold mt-0.5">Dashboard</span>
-            </button>
-            <button onclick="switchTab('contacts')" class="flex flex-col items-center justify-center text-gray-400" id="nav-contacts">
-                <span class="text-xl">👥</span>
-                <span class="text-[10px] font-bold mt-0.5">Contacts</span>
-            </button>
-        </nav>
+    <!-- Barre de navigation (visible seulement connecté) -->
+    <div id="bottomNav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 max-w-md mx-auto hidden z-20">
+      <button data-nav="dashboard" class="nav-btn flex flex-col items-center text-gray-500 p-2"><i class="fas fa-chart-pie text-xl"></i><span class="text-xs">Tableau</span></button>
+      <button data-nav="contacts" class="nav-btn flex flex-col items-center text-gray-500 p-2"><i class="fas fa-address-book text-xl"></i><span class="text-xs">Contacts</span></button>
+      <button data-nav="pipeline" class="nav-btn flex flex-col items-center text-gray-500 p-2"><i class="fas fa-columns text-xl"></i><span class="text-xs">Pipeline</span></button>
+      <button data-nav="import" class="nav-btn flex flex-col items-center text-gray-500 p-2"><i class="fas fa-upload text-xl"></i><span class="text-xs">Import</span></button>
+      <button data-nav="ai" class="nav-btn flex flex-col items-center text-gray-500 p-2"><i class="fas fa-robot text-xl"></i><span class="text-xs">IA</span></button>
     </div>
+  </div>
 
-    <!-- MODAL DE FICHE CLIENT ET GÉNÉRATEUR IA -->
-    <div id="contact-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
-        <div class="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="text-xl font-black text-gray-800" id="modal-name">Chargement...</h3>
-                    <p class="text-xs text-gray-400" id="modal-company"></p>
-                </div>
-                <button onclick="closeModal()" class="bg-gray-100 text-gray-500 w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
+  <script>
+    // ---------- CONFIG SUPABASE ----------
+    const SUPABASE_URL = "https://tkikhtpzpixzscpkewlh.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_or9nFB9PectQNg5BFtTrAQ_UuX_tBB2";
+    const ADMIN_EMAIL = "elaidi.aziz10.if@gmail.com";
+
+    let supabase;
+    let currentUser = null;
+    let currentRole = null;
+    let currentView = "dashboard";
+    let charts = {};
+
+    // Gestion offline : file d'attente des opérations
+    let pendingOps = []; // chaque opération { type, table, data, id? }
+    let isOnline = navigator.onLine;
+
+    // Initialisation
+    async function init() {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      await localforage.setItem("pendingOps", []);
+      loadPendingOps();
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", () => { isOnline = false; showToast("Mode hors-ligne activé", "warning"); });
+      checkAuth();
+    }
+
+    async function loadPendingOps() {
+      const stored = await localforage.getItem("pendingOps");
+      if (stored) pendingOps = stored;
+    }
+
+    async function savePendingOps() {
+      await localforage.setItem("pendingOps", pendingOps);
+    }
+
+    async function syncPendingOps() {
+      if (!isOnline || !currentUser) return;
+      if (pendingOps.length === 0) return;
+      showToast(`Synchronisation de ${pendingOps.length} opération(s)...`, "info");
+      const opsCopy = [...pendingOps];
+      for (let op of opsCopy) {
+        try {
+          if (op.type === "insert") {
+            const { error } = await supabase.from(op.table).insert(op.data);
+            if (!error) removePendingOp(op);
+          } else if (op.type === "update") {
+            const { error } = await supabase.from(op.table).update(op.data).eq("id", op.id);
+            if (!error) removePendingOp(op);
+          } else if (op.type === "delete") {
+            const { error } = await supabase.from(op.table).delete().eq("id", op.id);
+            if (!error) removePendingOp(op);
+          }
+        } catch(e) { console.warn(e); }
+      }
+      showToast("Synchronisation terminée", "success");
+      refreshCurrentView();
+    }
+
+    function removePendingOp(op) {
+      const index = pendingOps.findIndex(o => JSON.stringify(o) === JSON.stringify(op));
+      if (index !== -1) pendingOps.splice(index,1);
+      savePendingOps();
+    }
+
+    async function addPendingOp(op) {
+      pendingOps.push(op);
+      await savePendingOps();
+      if (isOnline) syncPendingOps();
+    }
+
+    async function handleOnline() {
+      isOnline = true;
+      showToast("Connexion rétablie, synchronisation...", "success");
+      await syncPendingOps();
+      refreshCurrentView();
+    }
+
+    function showToast(msg, type="info") {
+      let toast = document.createElement("div");
+      toast.className = "toast-notif";
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        await fetchUserRole();
+        showApp(true);
+        syncPendingOps();
+      } else {
+        showApp(false);
+        renderLogin();
+      }
+    }
+
+    async function fetchUserRole() {
+      if (!currentUser) return;
+      // Rôle admin si email correspond
+      if (currentUser.email === ADMIN_EMAIL) {
+        currentRole = "admin";
+      } else {
+        const { data, error } = await supabase.from("profiles").select("role").eq("id", currentUser.id).single();
+        if (!error && data) currentRole = data.role;
+        else currentRole = "user";
+      }
+      document.getElementById("userRoleBadge").innerText = currentRole === "admin" ? "Admin" : "Utilisateur";
+    }
+
+    function showApp(show) {
+      document.getElementById("bottomNav").classList.toggle("hidden", !show);
+      document.getElementById("logoutBtn").classList.toggle("hidden", !show);
+      if (show) {
+        attachNavListeners();
+        refreshCurrentView();
+      } else {
+        document.getElementById("view-container").innerHTML = "";
+      }
+    }
+
+    function attachNavListeners() {
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.removeEventListener("click", navHandler);
+        btn.addEventListener("click", navHandler);
+      });
+      document.getElementById("logoutBtn").onclick = async () => {
+        await supabase.auth.signOut();
+        currentUser = null;
+        showApp(false);
+        renderLogin();
+      };
+    }
+
+    function navHandler(e) {
+      const view = e.currentTarget.dataset.nav;
+      if (view) {
+        currentView = view;
+        refreshCurrentView();
+      }
+    }
+
+    async function refreshCurrentView() {
+      if (!currentUser) return;
+      if (currentView === "dashboard") await renderDashboard();
+      else if (currentView === "contacts") await renderContacts();
+      else if (currentView === "pipeline") await renderPipeline();
+      else if (currentView === "import") renderImportExport();
+      else if (currentView === "ai") await renderAISuggestions();
+      // Mettre à jour style nav actif
+      document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.toggle("text-indigo-600", btn.dataset.nav === currentView);
+        btn.classList.toggle("text-gray-500", btn.dataset.nav !== currentView);
+      });
+    }
+
+    // ---------- VUE LOGIN/INSCRIPTION ----------
+    function renderLogin() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `
+        <div class="space-y-6 mt-8">
+          <div class="bg-white rounded-2xl shadow p-6">
+            <h2 class="text-2xl font-bold text-center mb-6">Bienvenue</h2>
+            <div id="loginForm" class="space-y-4">
+              <input type="email" id="loginEmail" placeholder="Email" class="w-full p-3 border rounded-xl">
+              <input type="password" id="loginPassword" placeholder="Mot de passe" class="w-full p-3 border rounded-xl">
+              <button id="doLogin" class="w-full bg-indigo-600 text-white py-3 rounded-xl btn-tap">Se connecter</button>
+              <button id="showSignup" class="w-full text-indigo-600 py-2">Créer un compte</button>
             </div>
-
-            <div class="space-y-2">
-                <p class="text-xs font-bold text-gray-400 uppercase">Coordonnées</p>
-                <div class="bg-gray-50 p-3 rounded-xl text-sm space-y-1">
-                    <p>📱 Téléphone: <span id="modal-phone" class="font-semibold"></span></p>
-                    <p>📧 Email: <span id="modal-email" class="font-semibold"></span></p>
-                </div>
+            <div id="signupForm" class="space-y-4 hidden">
+              <input type="email" id="signupEmail" placeholder="Email" class="w-full p-3 border rounded-xl">
+              <input type="password" id="signupPassword" placeholder="Mot de passe" class="w-full p-3 border rounded-xl">
+              <button id="doSignup" class="w-full bg-green-600 text-white py-3 rounded-xl btn-tap">S'inscrire</button>
+              <button id="showLogin" class="w-full text-indigo-600 py-2">← Retour connexion</button>
             </div>
-
-            <!-- Changement de statut de prospection -->
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Statut de prospection</label>
-                <select id="modal-status-select" class="w-full p-3 bg-gray-50 rounded-xl text-sm font-semibold border-0">
-                    <option value="Lead">Lead (Nouveau)</option>
-                    <option value="A rappeler">À rappeler</option>
-                    <option value="Pas interesse">Pas intéressé</option>
-                    <option value="Client">Client signé</option>
-                </select>
-            </div>
-
-            <!-- Module de messagerie automatisée par l'IA -->
-            <div class="border-t border-gray-100 pt-3 space-y-2">
-                <p class="text-xs font-bold text-purple-600 uppercase flex items-center">✨ Générateur de Message IA</p>
-                <button onclick="generateIAMessage()" class="w-full bg-purple-50 text-purple-600 p-2.5 rounded-xl text-xs font-bold active:bg-purple-100">
-                    🪄 Rédiger un texte de relance ciblé
-                </button>
-                <textarea id="ia-message-output" class="w-full p-3 bg-purple-50/50 rounded-xl text-xs border border-purple-100 hidden h-24 focus:outline-none" placeholder="Le texte généré apparaîtra ici..."></textarea>
-                
-                <!-- Boutons d'action natifs du téléphone -->
-                <div id="messaging-actions" class="grid grid-cols-3 gap-2 hidden">
-                    <button onclick="sendAction('sms')" class="bg-blue-50 text-blue-600 p-2 rounded-xl text-xs font-bold text-center">SMS</button>
-                    <button onclick="sendAction('whatsapp')" class="bg-green-50 text-green-600 p-2 rounded-xl text-xs font-bold text-center">WhatsApp</button>
-                    <button onclick="sendAction('email')" class="bg-gray-100 text-gray-700 p-2 rounded-xl text-xs font-bold text-center">Email</button>
-                </div>
-            </div>
-
-            <button onclick="saveContactChanges()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold text-sm active:scale-95 transition">Enregistrer les modifications</button>
+          </div>
         </div>
-    </div>
+      `;
+      document.getElementById("doLogin").onclick = async () => {
+        const email = document.getElementById("loginEmail").value;
+        const pwd = document.getElementById("loginPassword").value;
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+        if (error) alert(error.message);
+        else { await checkAuth(); }
+      };
+      document.getElementById("showSignup").onclick = () => {
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("signupForm").classList.remove("hidden");
+      };
+      document.getElementById("showLogin").onclick = () => {
+        document.getElementById("signupForm").classList.add("hidden");
+        document.getElementById("loginForm").classList.remove("hidden");
+      };
+      document.getElementById("doSignup").onclick = async () => {
+        const email = document.getElementById("signupEmail").value;
+        const pwd = document.getElementById("signupPassword").value;
+        const { error } = await supabase.auth.signUp({ email, password: pwd });
+        if (error) alert(error.message);
+        else alert("Compte créé ! Connectez-vous.");
+      };
+    }
 
-    <!-- CODE LOGIQUE ET INTEGRATION SUPABASE -->
-    <script>
-        // Configuration injectée automatiquement
-        const SUPABASE_URL = "https://supabase.co";
-        const SUPABASE_KEY = "sb_publishable_or9nFB9PectQNg5BFtTrAQ_UuX_tBB2";
-        const ADMIN_EMAIL = "elaidi.aziz10.if@gmail.com";
+    // ---------- DASHBOARD avec graphiques ----------
+    async function renderDashboard() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `<div class="space-y-4"><div class="bg-white p-4 rounded-xl shadow"><canvas id="leadChart" height="150"></canvas></div><div class="bg-white p-4 rounded-xl shadow"><canvas id="conversionChart" height="150"></canvas></div><div class="bg-white p-4 rounded-xl shadow"><h3 class="font-bold">CA prévisionnel</h3><p id="caValue" class="text-2xl font-bold text-green-600">0 €</p></div><div id="notifRelance" class="bg-yellow-100 p-3 rounded-xl"></div></div>`;
+      
+      let query = supabase.from("contacts").select("*");
+      if (currentRole !== "admin") query = query.eq("user_id", currentUser.id);
+      const { data: contacts } = await query;
+      if (!contacts) return;
+      
+      const leads = contacts.filter(c => c.status === "lead").length;
+      const clients = contacts.filter(c => c.status === "client").length;
+      const conversion = clients / (leads+clients || 1);
+      const caPrev = clients * 1250; // exemple
+      document.getElementById("caValue").innerText = caPrev + " €";
+      
+      if (charts.leadChart) charts.leadChart.destroy();
+      if (charts.conversionChart) charts.conversionChart.destroy();
+      const ctx1 = document.getElementById("leadChart").getContext("2d");
+      charts.leadChart = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Leads', 'Clients'], datasets: [{ data: [leads, clients], backgroundColor: ['#f59e0b','#10b981'] }] } });
+      const ctx2 = document.getElementById("conversionChart").getContext("2d");
+      charts.conversionChart = new Chart(ctx2, { type: 'bar', data: { labels: ['Taux conversion'], datasets: [{ label: '%', data: [(conversion*100).toFixed(1)], backgroundColor: '#3b82f6' }] } });
+      
+      // Notifications relances
+      const today = new Date().toISOString().slice(0,10);
+      const relances = contacts.filter(c => c.next_followup === today);
+      if (relances.length) document.getElementById("notifRelance").innerHTML = `<i class="fas fa-bell"></i> ${relances.length} relance(s) aujourd'hui !`;
+      else document.getElementById("notifRelance").innerHTML = "Aucune relance aujourd'hui";
+    }
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        let currentUser = null;
-        let isAdmin = false;
-        let contactsData = [];
-        let currentContactId = null;
-        let chartInstance = null;
+    // ---------- GESTION CONTACTS (CRUD) ----------
+    async function renderContacts() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `<div class="space-y-3"><button id="addContactBtn" class="w-full bg-indigo-600 text-white py-3 rounded-xl btn-tap"><i class="fas fa-plus"></i> Nouveau contact</button><div id="contactsList" class="space-y-3"></div></div>`;
+      let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
+      if (currentRole !== "admin") query = query.eq("user_id", currentUser.id);
+      const { data: contacts } = await query;
+      const listDiv = document.getElementById("contactsList");
+      if (!contacts || contacts.length === 0) { listDiv.innerHTML = "<p class='text-gray-500'>Aucun contact</p>"; return; }
+      for (let c of contacts) {
+        const card = document.createElement("div");
+        card.className = "bg-white p-4 rounded-xl shadow border";
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div><h3 class="font-bold">${c.name || "Sans nom"}</h3><p class="text-sm">${c.email || ""} | ${c.phone || ""}</p><p class="text-xs bg-gray-100 inline-block px-2 py-1 rounded mt-1">${c.status || "lead"}</p></div>
+            <div class="flex gap-2"><button data-id="${c.id}" class="editContact text-blue-600"><i class="fas fa-edit"></i></button><button data-id="${c.id}" class="deleteContact text-red-600"><i class="fas fa-trash"></i></button><button data-id="${c.id}" class="msgContact text-green-600"><i class="fab fa-whatsapp"></i></button></div>
+          </div>
+          <div class="text-xs mt-2 text-gray-500">Historique: ${c.history || "Aucun"}</div>
+          <div class="mt-2 flex gap-2 text-xs"><span class="bg-purple-100 p-1 rounded">Prochaine relance: ${c.next_followup || "—"}</span></div>
+        `;
+        card.querySelector(".editContact").onclick = () => editContactForm(c);
+        card.querySelector(".deleteContact").onclick = async () => { if(confirm("Supprimer ?")) await deleteContact(c.id); };
+        card.querySelector(".msgContact").onclick = () => generateAndSendMessage(c);
+        listDiv.appendChild(card);
+      }
+      document.getElementById("addContactBtn").onclick = () => editContactForm(null);
+    }
 
-        // Éléments DOM
-        const authScreen = document.getElementById('auth-screen');
-        const appScreen = document.getElementById('app-screen');
-        
-        // Initialisation de l'authentification
-        document.getElementById('btn-login').addEventListener('click', async () => {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) alert("Erreur d'authentification: " + error.message);
-            else checkSession();
-        });
-
-        document.getElementById('btn-signup').addEventListener('click', async () => {
-            const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            const { data, error } = await supabase.auth.signUp({ email, password });
-            if (error) alert("Erreur d'inscription: " + error.message);
-            else alert("Compte utilisateur créé avec succès ! Connectez-vous.");
-        });
-
-        document.getElementById('btn-logout').addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            location.reload();
-        });
-
-        async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                isAdmin = (currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-                
-                authScreen.classList.add('hidden');
-                appScreen.classList.remove('hidden');
-                
-                document.getElementById('user-role-display').innerText = isAdmin ? "👑 Espace Admin" : "👥 Espace Équipe";
-                if (isAdmin) document.getElementById('admin-actions').classList.remove('hidden');
-                
-                // Vérifier la structure de la table et charger
-                await setupDatabaseStructure();
-                loadLocalOrCloudData();
-            }
+    async function editContactForm(contact = null) {
+      const isNew = !contact;
+      const fields = { name: contact?.name || "", email: contact?.email || "", phone: contact?.phone || "", company: contact?.company || "", status: contact?.status || "lead", next_followup: contact?.next_followup || "", history: contact?.history || "" };
+      const html = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-3">
+            <h3 class="font-bold text-lg">${isNew ? "Nouveau contact" : "Modifier"}</h3>
+            <input id="cname" placeholder="Nom *" class="w-full p-2 border rounded" value="${fields.name}">
+            <input id="cemail" placeholder="Email" class="w-full p-2 border rounded" value="${fields.email}">
+            <input id="cphone" placeholder="Téléphone" class="w-full p-2 border rounded" value="${fields.phone}">
+            <input id="ccompany" placeholder="Société" class="w-full p-2 border rounded" value="${fields.company}">
+            <select id="cstatus" class="w-full p-2 border rounded"><option ${fields.status==="lead"?"selected":""}>lead</option><option ${fields.status==="à rappeler"?"selected":""}>à rappeler</option><option ${fields.status==="client"?"selected":""}>client</option><option ${fields.status==="pas intéressé"?"selected":""}>pas intéressé</option></select>
+            <input id="cnext" type="date" placeholder="Prochain suivi" class="w-full p-2 border rounded" value="${fields.next_followup}">
+            <textarea id="chistory" placeholder="Historique interactions" class="w-full p-2 border rounded" rows="2">${fields.history}</textarea>
+            <div class="flex gap-2"><button id="saveContactBtn" class="bg-indigo-600 text-white flex-1 py-2 rounded">Enregistrer</button><button id="closeModal" class="bg-gray-300 flex-1 py-2 rounded">Annuler</button></div>
+          </div>
+        </div>
+      `;
+      const modalDiv = document.createElement("div");
+      modalDiv.innerHTML = html;
+      document.body.appendChild(modalDiv);
+      const saveBtn = modalDiv.querySelector("#saveContactBtn");
+      saveBtn.onclick = async () => {
+        const data = {
+          name: modalDiv.querySelector("#cname").value,
+          email: modalDiv.querySelector("#cemail").value,
+          phone: modalDiv.querySelector("#cphone").value,
+          company: modalDiv.querySelector("#ccompany").value,
+          status: modalDiv.querySelector("#cstatus").value,
+          next_followup: modalDiv.querySelector("#cnext").value,
+          history: modalDiv.querySelector("#chistory").value,
+          user_id: currentUser.id
+        };
+        if (isNew) {
+          if (!isOnline) { await addPendingOp({ type: "insert", table: "contacts", data }); showToast("Ajout en attente (hors-ligne)", "info"); }
+          else { const { error } = await supabase.from("contacts").insert(data); if (error) alert(error.message); }
+        } else {
+          if (!isOnline) { await addPendingOp({ type: "update", table: "contacts", id: contact.id, data }); showToast("Modification en attente", "info"); }
+          else { const { error } = await supabase.from("contacts").update(data).eq("id", contact.id); if (error) alert(error.message); }
         }
+        modalDiv.remove();
+        refreshCurrentView();
+      };
+      modalDiv.querySelector("#closeModal").onclick = () => modalDiv.remove();
+    }
 
-        // Créer automatiquement la table si elle n'existe pas (Mode Fail-Safe)
-        async function setupDatabaseStructure() {
-            // Dans une vraie app, Supabase requiert des requêtes SQL pour créer les tables. 
-            // Nous supposons la table 'contacts' existante avec : id, name, email, phone, company, status, updated_at
+    async function deleteContact(id) {
+      if (!isOnline) { await addPendingOp({ type: "delete", table: "contacts", id }); showToast("Suppression en attente", "info"); refreshCurrentView(); return; }
+      const { error } = await supabase.from("contacts").delete().eq("id", id);
+      if (!error) refreshCurrentView(); else alert(error.message);
+    }
+
+    // ---------- PIPELINE KANBAN ----------
+    async function renderPipeline() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `<div class="space-y-4"><h2 class="font-bold">Pipeline de vente</h2><div id="kanban" class="grid grid-cols-2 gap-3"></div></div>`;
+      let query = supabase.from("contacts").select("*");
+      if (currentRole !== "admin") query = query.eq("user_id", currentUser.id);
+      const { data: contacts } = await query;
+      const statuses = ["lead", "à rappeler", "client", "pas intéressé"];
+      const kanban = document.getElementById("kanban");
+      for (let s of statuses) {
+        const items = contacts?.filter(c => c.status === s) || [];
+        const col = document.createElement("div");
+        col.className = "bg-gray-50 p-2 rounded-lg";
+        col.innerHTML = `<h3 class="font-semibold text-sm mb-2 capitalize">${s}</h3><div class="space-y-2">${items.map(c => `<div class="bg-white p-2 rounded shadow text-xs"><b>${c.name}</b><br>${c.phone}<br><button class="text-indigo-600 mt-1 block" data-id="${c.id}" data-status="${s}">Changer statut</button></div>`).join("")}</div>`;
+        kanban.appendChild(col);
+        col.querySelectorAll("button[data-id]").forEach(btn => btn.onclick = () => updateStatus(btn.dataset.id, btn.dataset.status));
+      }
+    }
+    async function updateStatus(id, oldStatus) {
+      const newStatus = prompt("Nouveau statut (lead, à rappeler, client, pas intéressé)", oldStatus);
+      if (newStatus && ["lead","à rappeler","client","pas intéressé"].includes(newStatus)) {
+        if (!isOnline) { await addPendingOp({ type: "update", table: "contacts", id, data: { status: newStatus } }); showToast("Changement en attente", "info"); }
+        else { await supabase.from("contacts").update({ status: newStatus }).eq("id", id); }
+        refreshCurrentView();
+      }
+    }
+
+    // ---------- IMPORT/EXCEL ----------
+    function renderImportExport() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `
+        <div class="space-y-5">
+          <div class="bg-white p-4 rounded-xl shadow"><h3 class="font-bold">Import contacts (Excel/CSV/TXT)</h3><input type="file" id="importFile" accept=".xlsx,.csv,.txt" class="my-2"><button id="doImport" class="bg-green-600 text-white w-full py-2 rounded btn-tap">Importer</button></div>
+          ${currentRole === "admin" ? `<div class="bg-white p-4 rounded-xl shadow"><h3 class="font-bold">Export complet base (.xlsx)</h3><button id="exportExcel" class="bg-blue-600 text-white w-full py-2 rounded btn-tap"><i class="fas fa-download"></i> Télécharger toutes les données</button></div>` : ""}
+          <div class="text-xs text-gray-500">Fichier attendu : colonnes Nom, Email, Téléphone, Société, Statut (lead/à rappeler/client/pas intéressé)</div>
+        </div>
+      `;
+      document.getElementById("doImport").onclick = async () => {
+        const file = document.getElementById("importFile").files[0];
+        if (!file) return alert("Sélectionnez un fichier");
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        for (let row of rows) {
+          const contact = {
+            name: row["Nom"] || row["nom"] || "Sans nom",
+            email: row["Email"] || row["email"] || "",
+            phone: row["Téléphone"] || row["telephone"] || "",
+            company: row["Société"] || row["societe"] || "",
+            status: row["Statut"] || "lead",
+            user_id: currentUser.id,
+            history: "Importé le " + new Date().toLocaleDateString()
+          };
+          if (isOnline) await supabase.from("contacts").insert(contact);
+          else await addPendingOp({ type: "insert", table: "contacts", data: contact });
         }
+        showToast("Import terminé", "success");
+        refreshCurrentView();
+      };
+      if (currentRole === "admin") {
+        document.getElementById("exportExcel").onclick = async () => {
+          const { data: allContacts } = await supabase.from("contacts").select("*");
+          const ws = XLSX.utils.json_to_sheet(allContacts);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "CRM_Data");
+          XLSX.writeFile(wb, `crm_export_${new Date().toISOString()}.xlsx`);
+        };
+      }
+    }
 
-        // Chargement des données avec support Offline (LocalStorage)
-        async function loadLocalOrCloudData() {
-            if (navigator.onLine) {
-                document.getElementById('network-status').innerText = "🟢 En ligne";
-                const { data, error } = await supabase.from('contacts').select('*').order('name');
-                if (!error && data) {
-                    contactsData = data;
-                    localStorage.setItem('cached_contacts', JSON.stringify(data));
-                }
-            } else {
-                document.getElementById('network-status').innerText = "🔴 Mode Hors-ligne";
-                contactsData = JSON.parse(localStorage.getItem('cached_contacts')) || [];
-            }
-            updateDashboard();
-            renderContacts(contactsData);
-        }
+    // ---------- IA & SUGGESTIONS + messages personnalisés ----------
+    async function renderAISuggestions() {
+      const container = document.getElementById("view-container");
+      container.innerHTML = `<div class="space-y-4"><div class="bg-purple-100 p-4 rounded-xl"><h3 class="font-bold">🔥 Prospect chaud suggéré</h3><div id="hotProspect"></div></div><div class="bg-white p-4 rounded-xl"><h3>Génération de message IA</h3><select id="aiContactSelect" class="w-full p-2 border rounded my-2"></select><textarea id="aiMsgPreview" rows="3" class="w-full border rounded p-2"></textarea><div class="flex gap-2 mt-2"><button id="genMsgBtn" class="bg-indigo-600 text-white p-2 rounded flex-1">Générer message</button><button id="sendSMS" class="bg-green-600 text-white p-2 rounded flex-1"><i class="fas fa-sms"></i> SMS</button><button id="sendEmail" class="bg-blue-600 text-white p-2 rounded flex-1"><i class="fas fa-envelope"></i> Email</button><button id="sendWhatsApp" class="bg-teal-600 text-white p-2 rounded flex-1"><i class="fab fa-whatsapp"></i> WhatsApp</button></div></div></div>`;
+      let query = supabase.from("contacts").select("*");
+      if (currentRole !== "admin") query = query.eq("user_id", currentUser.id);
+      const { data: contacts } = await query;
+      const select = document.getElementById("aiContactSelect");
+      contacts.forEach(c => { let opt = document.createElement("option"); opt.value = c.id; opt.textContent = `${c.name} (${c.status})`; select.appendChild(opt); });
+      // suggérer prospect chaud: lead avec prochaine relance proche ou priorité
+      const hot = contacts.filter(c => c.status === "lead").sort((a,b)=> new Date(a.next_followup) - new Date(b.next_followup))[0];
+      document.getElementById("hotProspect").innerHTML = hot ? `<p><i class="fas fa-fire"></i> ${hot.name} - ${hot.phone} - à rappeler le ${hot.next_followup || "bientôt"}</p><button id="callHotBtn" class="bg-red-500 text-white p-1 rounded text-sm">Appeler</button>` : "Aucun lead actif";
+      if (hot) document.getElementById("callHotBtn").onclick = () => window.location.href = `tel:${hot.phone}`;
+      
+      document.getElementById("genMsgBtn").onclick = () => {
+        const contact = contacts.find(c => c.id == select.value);
+        if (!contact) return;
+        let msg = `Bonjour ${contact.name},\n`;
+        if (contact.status === "lead") msg += `Nous aimerions discuter de vos besoins chez ${contact.company || "votre société"}. Disponible pour un appel ?`;
+        else if (contact.status === "à rappeler") msg += `Suite à notre précédent échange, je me permets de vous relancer. Restez joignable ?`;
+        else if (contact.status === "client") msg += `Merci pour votre confiance ! Souhaitez-vous une mise à jour de nos offres ?`;
+        else msg += `Nous espérons vous satisfaire, n'hésitez pas à nous solliciter.`;
+        document.getElementById("aiMsgPreview").value = msg;
+      };
+      document.getElementById("sendSMS").onclick = () => { let c = contacts.find(c => c.id == select.value); if(c?.phone) window.location.href = `sms:${c.phone}?body=${encodeURIComponent(document.getElementById("aiMsgPreview").value)}`; else alert("Numéro manquant"); };
+      document.getElementById("sendEmail").onclick = () => { let c = contacts.find(c => c.id == select.value); if(c?.email) window.location.href = `mailto:${c.email}?subject=Relance CRM&body=${encodeURIComponent(document.getElementById("aiMsgPreview").value)}`; else alert("Email manquant"); };
+      document.getElementById("sendWhatsApp").onclick = () => { let c = contacts.find(c => c.id == select.value); if(c?.phone) window.location.href = `https://wa.me/${c.phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(document.getElementById("aiMsgPreview").value)}`; else alert("Numéro WhatsApp manquant"); };
+    }
 
-        // Rendu visuel de la liste des contacts optimisé pour le tactile mobile
-        function renderContacts(list) {
-            const container = document.getElementById('contacts-container');
-            if (list.length === 0) {
-                container.innerHTML = '<p class="text-center text-sm text-gray-400 py-8">Aucun contact disponible.</p>';
-                return;
-            }
-            container.innerHTML = '';
-            list.forEach(c => {
-                const badgeColor = c.status === 'Client' ? 'bg-green-100 text-green-700' : c.status === 'Pas interesse' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700';
-                const div = document.createElement('div');
-                div.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-2xs flex justify-between items-center active:bg-gray-50";
-                div.onclick = () => openContactModal(c.id);
-                div.innerHTML = `
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-base">${c.name || 'Sans nom'}</h4>
-                        <p class="text-xs text-gray-400">${c.company || 'Aucune entreprise'} • ${c.phone || 'Pas de numéro'}</p>
-                    </div>
-                    <span class="text-xs px-2.5 py-1 rounded-full font-bold ${badgeColor}">${c.status || 'Lead'}</span>
-                `;
-                container.appendChild(div);
-            });
-        }
+    async function generateAndSendMessage(contact) {
+      let msg = `Bonjour ${contact.name}, nous vous contactons suite à votre statut "${contact.status}". Restons en contact !`;
+      if(confirm("Envoyer ce message par WhatsApp ?\n"+msg)) window.location.href = `https://wa.me/${contact.phone?.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(msg)}`;
+    }
 
-        // Recherche en temps réel
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            const filtered = contactsData.filter(c => 
-                (c.name && c.name.toLowerCase().includes(val)) || 
-                (c.phone && c.phone.includes(val))
-            );
-            renderContacts(filtered);
-        });
-
-        // Ouvrir le panneau de détails du prospect
-        function openContactModal(id) {
-            const c = contactsData.find(item => item.id === id);
-            if (!c) return;
-            currentContactId = id;
-            
-            document.getElementById('modal-name').innerText = c.name || '';
-            document.getElementById('modal-company').innerText = c.company || '';
-            document.getElementById('modal-phone').innerText = c.phone || '';
-            document.getElementById('modal-email').innerText = c.email || '';
-            document.getElementById('modal-status-select').value = c.status || 'Lead';
-            
-            // Réinitialiser la zone IA
-            document.getElementById('ia-message-output').classList.add('hidden');
-            document.getElementById('messaging-actions').classList.add('hidden');
-            
-            document.getElementById('contact-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('contact-modal').classList.add('hidden');
-        }
-
-        // Sauvegarder les modifications du contact
-        async function saveContactChanges() {
-            const newStatus = document.getElementById('modal-status-select').value;
-            const index = contactsData.findIndex(item => item.id === currentContactId);
-            
-            if (index !== -1) {
-                contactsData[index].status = newStatus;
-                
-                if (navigator.onLine) {
-                    await supabase.from('contacts').update({ status: newStatus }).eq('id', currentContactId);
-                } else {
-                    // File d'attente offline
-                    let offlineActions = JSON.parse(localStorage.getItem('offline_updates')) || [];
-                    offlineActions.push({ id: currentContactId, status: newStatus });
-                    localStorage.setItem('offline_updates', JSON.stringify(offlineActions));
-                }
-                
-                localStorage.setItem('cached_contacts', JSON.stringify(contactsData));
-                closeModal();
-                updateDashboard();
-                renderContacts(contactsData);
-            }
-        }
-
-        // Générateur de message intelligent basé sur le profil du prospect
-        function generateIAMessage() {
-            const c = contactsData.find(item => item.id === currentContactId);
-            const status = document.getElementById('modal-status-select').value;
-            
-            let message = "";
-            if (status === 'Lead') {
-                message = `Bonjour ${c.name}, j'ai découvert votre entreprise ${c.company}. Êtes-vous disponible cette semaine pour échanger brièvement par téléphone ? Cordialement.`;
-            } else if (status === 'A rappeler') {
-                message = `Bonjour ${c.name}, comme convenu lors de notre dernier appel, je me permets de vous recontacter pour faire le point sur votre projet.`;
-            } else {
-                message = `Bonjour ${c.name}, ravi de vous compter parmi nos partenaires officiels !`;
-            }
-            
-            const textarea = document.getElementById('ia-message-output');
-            textarea.value = message;
-            textarea.classList.remove('hidden');
-            document.getElementById('messaging-actions').classList.remove('hidden');
-        }
-
-        // Actions natives de communication (Ouvre directement les apps du téléphone)
-        function sendAction(type) {
-            const c = contactsData.find(item => item.id === currentContactId);
-            const msg = encodeURIComponent(document.getElementById('ia-message-output').value);
-            
-            if (type === 'sms') {
-                window.location.href = `sms:${c.phone}?body=${msg}`;
-            } else if (type === 'whatsapp') {
-                window.location.href = `https://wa.me{c.phone}?text=${msg}`;
-            } else if (type === 'email') {
-                window.location.href = `mailto:${c.email}?subject=Prospection&body=${msg}`;
-            }
-        }
-
-        // Traitement du Dashboard et des graphiques réels
-        function updateDashboard() {
-            const total = contactsData.length;
-            const clients = contactsData.filter(c => c.status === 'Client').length;
-            const leads = contactsData.filter(c => c.status === 'Lead').length;
-            const recall = contactsData.filter(c => c.status === 'A rappeler').length;
-            
-            document.getElementById('stat-total').innerText = total;
-            document.getElementById('stat-clients').innerText = clients;
-            
-            // Suggestion dynamique de l'IA pour le Dashboard
-            const pendingRecall = contactsData.find(c => c.status === 'A rappeler');
-            if (pendingRecall) {
-                document.getElementById('ia-suggestion').innerText = `🔥 Priorité : Relancer ${pendingRecall.name} (${pendingRecall.phone}) aujourd'hui !`;
-            } else if (leads > 0) {
-                document.getElementById('ia-suggestion').innerText = `⚡ Vous avez ${leads} nouveaux leads non contactés à appeler.`;
-            } else {
-                document.getElementById('ia-suggestion').innerText = `🎉 Tous vos prospects sont à jour ! Intégrez de nouvelles listes.`;
-            }
-
-            // Génération du graphique Chart.js
-            const ctx = document.getElementById('analyticsChart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
-            
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Leads', 'A rappeler', 'Clients'],
-                    datasets: [{
-                        data: [leads, recall, clients],
-                        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
-                }
-            });
-        }
-
-        // Gestion de l'import de gros fichiers (5 000 contacts max)
-        document.getElementById('import-file').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const data = e.target.result;
-                let importedContacts = [];
-
-                if (file.name.endsWith('.xlsx')) {
-                    const workbook = XLSX.read(data, { type: 'binary' });
-                    const sheetName = workbook.SheetNames[0];
-                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                    importedContacts = json.map(row => ({
-                        name: row.Nom || row.name || 'Inconnu',
-                        email: row.Email || row.email || '',
-                        phone: String(row.Telephone || row.phone || row.Téléphone || ''),
-                        company: row.Societe || row.company || row.Société || '',
-                        status: row.Statut || row.status || 'Lead'
-                    }));
-                } else {
-                    // Traitement texte / CSV de base
-                    const lines = data.split('\n');
-                    for (let i = 1; i < lines.length; i++) {
-                        if (!lines[i].trim()) continue;
-                        const cols = lines[i].split(/[,;]/);
-                        importedContacts.push({
-                            name: cols[0]?.replace(/"/g, '') || 'Inconnu',
-                            email: cols[1]?.trim() || '',
-                            phone: cols[2]?.trim() || '',
-                            company: cols[3]?.trim() || '',
-                            status: cols[4]?.trim() || 'Lead'
-                        });
-                    }
-                }
-
-                if (importedContacts.length > 0) {
-                    alert(`Analyse terminée. Importation de ${importedContacts.length} contacts sur le serveur en cours...`);
-                    const { error } = await supabase.from('contacts').insert(importedContacts);
-                    if (error) alert("Erreur d'envoi cloud : " + error.message);
-                    else {
-                        alert("Synchronisation cloud réussie !");
-                        loadLocalOrCloudData();
-                    }
-                }
-            };
-
-            if (file.name.endsWith('.xlsx')) reader.readAsBinaryString(file);
-            else reader.readAsText(file);
-        });
-
-        // Gestion de l'export Excel réel
-        document.getElementById('btn-export').addEventListener('click', () => {
-            if (contactsData.length === 0) return alert("Aucune donnée à exporter.");
-            const worksheet = XLSX.utils.json_to_sheet(contactsData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Contacts");
-            XLSX.writeFile(workbook, `Export_CRM_${new Date().toISOString().slice(0,10)}.xlsx`);
-        });
-
-        // Changement d'onglets (Navigation Mobile)
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            
-            document.getElementById('nav-dashboard').className = tab === 'dashboard' ? 'flex flex-col items-center justify-center text-blue-600' : 'flex flex-col items-center justify-center text-gray-400';
-            document.getElementById('nav-contacts').className = tab === 'contacts' ? 'flex flex-col items-center justify-center text-blue-600' : 'flex flex-col items-center justify-center text-gray-400';
-        }
-
-        // Écouteurs de connexion réseau pour synchronisation automatique
-        window.addEventListener('online', async () => {
-            document.getElementById('network-status').innerText = "🟢 En ligne";
-            let offlineActions = JSON.parse(localStorage.getItem('offline_updates')) || [];
-            if (offlineActions.length > 0) {
-                for (let act of offlineActions) {
-                    await supabase.from('contacts').update({ status: act.status }).eq('id', act.id);
-                }
-                localStorage.removeItem('offline_updates');
-                alert("Synchronisation des modifications hors-ligne effectuée !");
-            }
-            loadLocalOrCloudData();
-        });
-        window.addEventListener('offline', () => {
-            document.getElementById('network-status').innerText = "🔴 Mode Hors-ligne";
-        });
-
-        // Lancement initial au démarrage de la page
-        window.onload = checkSession;
-    </script>
+    // notifications push simulées (relances urgentes)
+    async function checkRelanceNotifications() {
+      if (!currentUser) return;
+      let query = supabase.from("contacts").select("name, next_followup");
+      if (currentRole !== "admin") query = query.eq("user_id", currentUser.id);
+      const { data } = await query;
+      const today = new Date().toISOString().slice(0,10);
+      const urgent = data?.filter(c => c.next_followup === today);
+      if (urgent?.length) showToast(`📞 ${urgent.length} rappel(s) de relance aujourd'hui !`, "warning");
+    }
+    setInterval(checkRelanceNotifications, 60000); // chaque minute
+    // PWA : service worker simplifié (installation)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.log);
+    }
+    // Démarrer
+    init();
+  </script>
+  <!-- Service Worker minimal pour PWA (créer sw.js à la racine) -->
+  <script>
+    // Création dynamique du sw.js si inexistant (pour démo standalone)
+    if (!document.querySelector('#sw-check')) {
+      const blob = new Blob([`self.addEventListener('fetch', event => { event.respondWith(fetch(event.request)); });`], {type: 'application/javascript'});
+      const url = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url).then(reg => console.log("SW registered"));
+    }
+  </script>
 </body>
 </html>

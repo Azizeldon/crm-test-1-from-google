@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#080d1a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="NexCRM"/>
+<meta name="description" content="CRM intelligent pour prospection commerciale"/>
+<title>NexCRM — Intelligence Commerciale</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- SheetJS -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<script>
+tailwind.config = {
+  theme: { extend: {
+    fontFamily: { display: ['Syne','sans-serif'], body: ['Plus Jakarta Sans','sans-serif'] },
+    colors: {
+      ink:  { 50:'#eef2ff', 200:'#c7d2fe', 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5', 700:'#4338ca', 900:'#1e1b4b' },
+      lime: { 400:'#a3e635', 500:'#84cc16', 300:'#bef264' },
+      rose: { 400:'#fb7185', 500:'#f43f5e' },
+      amber:{ 400:'#fbbf24', 500:'#f59e0b' },
+      sky:  { 400:'#38bdf8', 500:'#0ea5e9' },
+    }
+  }}
+}
+</script>
+
+<style>
+:root{
+  --bg:#080d1a;
+  --surface:#0e1528;
+  --card:#111c32;
+  --border:rgba(255,255,255,0.06);
+  --accent:#6366f1;
+  --accent-glow:rgba(99,102,241,0.35);
+  --green:#84cc16;
+  --amber:#f59e0b;
+  --red:#f43f5e;
+  --sky:#0ea5e9;
+  --text:#f1f5f9;
+  --muted:#64748b;
+  --safe-top:env(safe-area-inset-top);
+  --safe-bottom:env(safe-area-inset-bottom);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-overflow-scrolling:touch}
+.ff-display{font-family:'Syne',sans-serif}
+
+/* ── Noise texture overlay ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4}
+
+/* ── Gradient mesh ── */
+.mesh{background:radial-gradient(ellipse 70% 50% at 15% 20%,rgba(99,102,241,.18) 0%,transparent 55%),radial-gradient(ellipse 55% 40% at 85% 75%,rgba(132,204,22,.1) 0%,transparent 50%),radial-gradient(ellipse 45% 55% at 55% 50%,rgba(14,165,233,.07) 0%,transparent 50%),var(--bg)}
+
+/* ── Glass ── */
+.glass{background:rgba(14,21,40,.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border)}
+.glass-sm{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px}
+.card-hover{transition:border-color .2s,transform .15s}
+.card-hover:active{transform:scale(.99);border-color:rgba(99,102,241,.4)}
+
+/* ── Inputs ── */
+.inp{width:100%;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.09);color:var(--text);border-radius:14px;padding:15px 16px;font-size:16px;font-family:inherit;outline:none;transition:border-color .2s,background .2s}
+.inp:focus{border-color:var(--accent);background:rgba(99,102,241,.08)}
+.inp::placeholder{color:var(--muted)}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+textarea.inp{resize:none}
+
+/* ── Buttons ── */
+.btn{border:none;border-radius:14px;padding:16px 24px;font-size:15px;font-weight:600;font-family:'Syne',sans-serif;cursor:pointer;width:100%;transition:all .18s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.975)}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 8px 24px rgba(99,102,241,.3)}
+.btn-primary:active{box-shadow:0 4px 12px rgba(99,102,241,.2)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);color:var(--text)}
+.btn-ghost:active{background:rgba(255,255,255,.1)}
+.btn-danger{background:rgba(244,63,94,.12);border:1.5px solid rgba(244,63,94,.3);color:#fb7185}
+.btn-sm{padding:10px 18px;font-size:13px;border-radius:11px}
+.btn-icon{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;border:none;background:rgba(255,255,255,.06)}
+.btn-icon:active{transform:scale(.9)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.b-lead{background:rgba(99,102,241,.18);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
+.b-prospect{background:rgba(245,158,11,.18);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.b-client{background:rgba(132,204,22,.18);color:#bef264;border:1px solid rgba(132,204,22,.3)}
+.b-lost{background:rgba(244,63,94,.18);color:#fda4af;border:1px solid rgba(244,63,94,.3)}
+.b-rappel{background:rgba(249,115,22,.18);color:#fdba74;border:1px solid rgba(249,115,22,.3)}
+.b-admin{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(132,204,22,.15));color:#c7d2fe;border:1px solid rgba(99,102,241,.4)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:8px 16px;border-radius:22px;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;border:none;font-family:'Syne',sans-serif}
+.tab.on{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(99,102,241,.35)}
+.tab:not(.on){background:rgba(255,255,255,.05);color:var(--muted)}
+
+/* ── Nav ── */
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 2px;cursor:pointer;transition:all .18s;border-radius:12px;margin:3px}
+.nav-tab:active{background:rgba(255,255,255,.06)}
+.nav-tab .ni{font-size:21px;line-height:1;color:var(--muted);transition:color .2s,transform .2s}
+.nav-tab .nl{font-size:9.5px;font-weight:700;font-family:'Syne',sans-serif;color:var(--muted);transition:color .2s;letter-spacing:.3px}
+.nav-tab.on .ni,.nav-tab.on .nl{color:var(--accent)}
+.nav-tab.on .ni{transform:scale(1.12)}
+
+/* ── Pages ── */
+.page{display:none}
+.page.on{display:block;animation:pageIn .28s cubic-bezier(.16,1,.3,1) both}
+@keyframes pageIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:90;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{background:#0e1528;border-radius:26px 26px 0 0;width:100%;max-width:620px;padding:20px 20px calc(20px + var(--safe-bottom));max-height:93vh;overflow-y:auto;animation:sheetUp .32s cubic-bezier(.16,1,.3,1) both;border-top:1px solid rgba(255,255,255,.08)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.drag-bar{width:40px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 22px}
+
+/* ── Toast ── */
+.toast{position:fixed;top:calc(14px + var(--safe-top));right:14px;z-index:200;border-radius:16px;padding:14px 18px;max-width:300px;animation:toastIn .35s cubic-bezier(.16,1,.3,1) both;box-shadow:0 16px 48px rgba(0,0,0,.5)}
+@keyframes toastIn{from{transform:translateX(115%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast-out{animation:toastOut .3s ease forwards}
+@keyframes toastOut{to{transform:translateX(115%);opacity:0}}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:calc(78px + var(--safe-bottom));right:18px;width:60px;height:60px;border-radius:20px;background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 8px 32px rgba(99,102,241,.45);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;border:none;color:#fff;z-index:50;transition:all .2s}
+.fab:active{transform:scale(.91)}
+@keyframes fabPulse{0%,100%{box-shadow:0 8px 32px rgba(99,102,241,.45)}50%{box-shadow:0 8px 48px rgba(99,102,241,.7)}}
+.fab{animation:fabPulse 2.5s infinite}
+
+/* ── Animations ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes glow{0%,100%{opacity:.6}50%{opacity:1}}
+
+.loader{width:22px;height:22px;border:2.5px solid rgba(255,255,255,.12);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;display:inline-block}
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.6s infinite;border-radius:14px}
+.animate-float{animation:float 3.5s ease-in-out infinite}
+.animate-glow{animation:glow 2s ease-in-out infinite}
+
+/* ── Offline banner ── */
+.offline-bar{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:9px 16px;text-align:center;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:.3px}
+
+/* ── Stat card ── */
+.stat{border-radius:20px;padding:18px;background:var(--card);border:1px solid var(--border);position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;border-radius:50%;opacity:.12}
+
+/* ── Contact row ── */
+.crow{border-radius:18px;padding:15px;margin-bottom:9px;cursor:pointer;transition:all .18s;border:1px solid var(--border);background:rgba(17,28,50,.7)}
+.crow:active{transform:scale(.99);border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.06)}
+
+/* ── Pipeline ── */
+.pipe-col{min-width:230px;flex-shrink:0}
+
+/* ── Progress ── */
+.prog-track{height:6px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#84cc16);transition:width .7s cubic-bezier(.16,1,.3,1)}
+
+/* ── AI gradient ── */
+.ai-box{background:linear-gradient(135deg,rgba(99,102,241,.13),rgba(132,204,22,.08));border:1px solid rgba(99,102,241,.28);border-radius:18px;padding:16px}
+
+/* ── Auth hero ── */
+.logo-glow{filter:drop-shadow(0 0 24px rgba(99,102,241,.6))}
+.logo-text{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;background:linear-gradient(135deg,#a5b4fc,#bef264);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:0;height:0}
+
+/* Delay helpers */
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}.d5{animation-delay:.25s}
+</style>
+</head>
+<body class="mesh">
+
+<!-- ════════════════════════════════════════════
+     OFFLINE BANNER
+════════════════════════════════════════════ -->
+<div id="offline-bar" class="offline-bar hidden" style="padding-top:calc(9px + var(--safe-top))">
+  ⚡ Mode Hors-Ligne — Modifications en file d'attente
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toasts"></div>
+
+<!-- ════════════════════════════════════════════
+     AUTH SCREEN
+════════════════════════════════════════════ -->
+<div id="auth-screen" class="min-h-screen flex flex-col justify-center px-5 py-10" style="padding-top:calc(40px + var(--safe-top))">
+  <div class="max-w-md mx-auto w-full">
+
+    <!-- Hero -->
+    <div class="text-center mb-9" style="animation:pageIn .5s cubic-bezier(.16,1,.3,1) both">
+      <div class="animate-float inline-block mb-5 logo-glow">
+        <div style="width:84px;height:84px;border-radius:26px;background:linear-gradient(135deg,#6366f1,#4f46e5);margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 20px 60px rgba(99,102,241,.45)">⚡</div>
+      </div>
+      <div class="logo-text">NexCRM</div>
+      <p style="color:var(--muted);font-size:13.5px;margin-top:5px;font-family:'Plus Jakarta Sans'">Intelligence Commerciale Nouvelle Génération</p>
+    </div>
+
+    <!-- Auth tab switch -->
+    <div class="glass-sm p-1 flex mb-5" style="animation:pageIn .5s .06s cubic-bezier(.16,1,.3,1) both;border-radius:16px">
+      <button onclick="switchTab('in')" id="t-in" class="flex-1 py-3 rounded-xl text-sm ff-display font-bold transition-all" style="background:var(--accent);color:#fff">Connexion</button>
+      <button onclick="switchTab('up')" id="t-up" class="flex-1 py-3 rounded-xl text-sm ff-display font-bold transition-all" style="color:var(--muted)">Inscription</button>
+    </div>
+
+    <!-- Sign In -->
+    <div id="f-in" style="animation:pageIn .5s .1s cubic-bezier(.16,1,.3,1) both">
+      <div class="space-y-3">
+        <div><label class="lbl">EMAIL</label><input id="si-email" type="email" placeholder="vous@exemple.com" class="inp"/></div>
+        <div><label class="lbl">MOT DE PASSE</label><input id="si-pwd" type="password" placeholder="••••••••" class="inp"/></div>
+        <button onclick="doSignIn()" id="btn-si" class="btn btn-primary mt-1"><span id="si-txt">Se connecter →</span></button>
+      </div>
+    </div>
+
+    <!-- Sign Up -->
+    <div id="f-up" class="hidden" style="animation:pageIn .5s .1s cubic-bezier(.16,1,.3,1) both">
+      <div class="space-y-3">
+        <div><label class="lbl">NOM COMPLET</label><input id="su-name" type="text" placeholder="Jean Dupont" class="inp"/></div>
+        <div><label class="lbl">EMAIL</label><input id="su-email" type="email" placeholder="vous@exemple.com" class="inp"/></div>
+        <div><label class="lbl">MOT DE PASSE</label><input id="su-pwd" type="password" placeholder="Min. 6 caractères" class="inp"/></div>
+        <button onclick="doSignUp()" id="btn-su" class="btn btn-primary mt-1"><span id="su-txt">Créer mon compte →</span></button>
+      </div>
+    </div>
+
+    <p id="auth-err" class="hidden text-center mt-4 text-sm" style="color:#fb7185"></p>
+    <p class="text-center mt-7" style="color:var(--muted);font-size:11.5px">🔒 Données chiffrées · Hébergées sur Supabase</p>
+  </div>
+</div>
+
+<style>.lbl{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin-bottom:8px;font-family:'Syne',sans-serif}</style>
+
+<!-- ════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════ -->
+<div id="app" class="hidden" style="padding-bottom:calc(70px + var(--safe-bottom))">
+
+  <!-- HEADER -->
+  <header class="glass sticky top-0 z-40 px-4" id="hdr" style="padding-top:calc(12px + var(--safe-top));padding-bottom:12px">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="ff-display font-bold text-lg leading-tight" id="hdr-title">Dashboard</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)" id="hdr-sub">Vue globale</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div id="sync-spin" class="hidden"><div class="loader" style="width:17px;height:17px;border-width:2px"></div></div>
+        <button onclick="openProfile()" id="avatar-btn" class="btn-icon" style="background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.3);font-size:19px">👤</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── PAGE: DASHBOARD ─── -->
+  <div id="pg-dashboard" class="page on px-4 pt-4 space-y-4">
+
+    <!-- KPI Row -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="stat d1" style="animation:pageIn .4s cubic-bezier(.16,1,.3,1) both">
+        <div class="text-xs font-bold mb-1 ff-display" style="color:var(--muted)">TOTAL CONTACTS</div>
+        <div class="text-4xl font-black ff-display" id="k-total">–</div>
+        <div class="text-xs mt-1 ff-display" style="color:#a5b4fc">base de données</div>
+        <div class="stat::before" style="background:#6366f1"></div>
+      </div>
+      <div class="stat d2" style="animation:pageIn .4s .05s cubic-bezier(.16,1,.3,1) both">
+        <div class="text-xs font-bold mb-1 ff-display" style="color:var(--muted)">CLIENTS ACTIFS</div>
+        <div class="text-4xl font-black ff-display" style="color:#bef264" id="k-clients">–</div>
+        <div class="text-xs mt-1 ff-display" style="color:#bef264">convertis</div>
+      </div>
+      <div class="stat d3" style="animation:pageIn .4s .1s cubic-bezier(.16,1,.3,1) both">
+        <div class="text-xs font-bold mb-1 ff-display" style="color:var(--muted)">TAUX CONV.</div>
+        <div class="text-4xl font-black ff-display" style="color:#fcd34d" id="k-conv">–</div>
+        <div class="prog-track mt-2"><div class="prog-fill" id="k-prog" style="width:0%"></div></div>
+      </div>
+      <div class="stat d4" style="animation:pageIn .4s .15s cubic-bezier(.16,1,.3,1) both">
+        <div class="text-xs font-bold mb-1 ff-display" style="color:var(--muted)">CA PRÉV.</div>
+        <div class="text-2xl font-black ff-display" style="color:#fdba74" id="k-ca">–</div>
+        <div class="text-xs mt-1 ff-display" style="color:#fdba74">estimé</div>
+      </div>
+    </div>
+
+    <!-- Rappels urgents -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <span class="ff-display font-bold text-xs tracking-wider" style="color:var(--muted)">🔔 RAPPELS URGENTS</span>
+        <span id="rc-badge" class="badge b-rappel">0</span>
+      </div>
+      <div id="rappels-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-3" style="color:var(--muted)">📊 PIPELINE DE VENTE</div>
+      <div style="position:relative;height:190px"><canvas id="ch-pipe"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-3" style="color:var(--muted)">📈 ACTIVITÉ — 7 DERNIERS JOURS</div>
+      <div style="position:relative;height:160px"><canvas id="ch-act"></canvas></div>
+    </div>
+
+    <!-- AI suggestion -->
+    <div class="ai-box">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl animate-float">🤖</span>
+        <span class="ff-display font-bold" style="background:linear-gradient(135deg,#a5b4fc,#bef264);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">IA — Prochain Prospect Chaud</span>
+      </div>
+      <div id="ai-suggest" class="text-sm" style="color:#c7d2fe;line-height:1.6">
+        <span class="loader" style="width:14px;height:14px;border-width:2px"></span> Analyse...
+      </div>
+    </div>
+
+    <!-- Admin zone -->
+    <div id="adm-zone" class="hidden space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="ff-display font-bold text-xs tracking-wider" style="color:var(--muted)">⚙️ ZONE ADMIN</span>
+        <span class="badge b-admin">Admin</span>
+      </div>
+      <button onclick="exportXLSX()" class="btn btn-ghost btn-sm">📥 Exporter base (.xlsx)</button>
+      <button onclick="confirmNuke()" class="btn btn-danger btn-sm">🗑️ Réinitialiser la base</button>
+    </div>
+  </div>
+
+  <!-- ─── PAGE: CONTACTS ─── -->
+  <div id="pg-contacts" class="page px-4 pt-4">
+    <div class="sticky top-0 z-10 pb-3 space-y-3" style="background:rgba(8,13,26,.92);backdrop-filter:blur(10px);padding-top:4px">
+      <div class="relative">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--muted)">🔍</span>
+        <input id="srch" type="search" placeholder="Rechercher nom, société, email…" class="inp" style="padding-left:44px" oninput="filterC()"/>
+      </div>
+      <div class="tabs">
+        <button class="tab on" onclick="setStatus('all',this)">Tous</button>
+        <button class="tab" onclick="setStatus('lead',this)">Lead</button>
+        <button class="tab" onclick="setStatus('prospect',this)">Prospect</button>
+        <button class="tab" onclick="setStatus('rappel',this)">À Rappeler</button>
+        <button class="tab" onclick="setStatus('client',this)">Client</button>
+        <button class="tab" onclick="setStatus('lost',this)">Perdu</button>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="trigImport()" class="btn btn-ghost btn-sm flex-1">📂 Importer Fichier</button>
+        <input id="imp-file" type="file" accept=".xlsx,.xls,.csv,.txt" class="hidden" onchange="handleImport(event)"/>
+      </div>
+    </div>
+    <div id="c-list"></div>
+    <div id="c-empty" class="hidden text-center py-16">
+      <div style="font-size:52px;margin-bottom:12px">📋</div>
+      <div class="ff-display font-bold text-lg">Aucun contact</div>
+      <div class="text-sm mt-1" style="color:var(--muted)">Importez un fichier ou ajoutez un contact</div>
+    </div>
+    <div id="c-skel" class="space-y-3 py-2">
+      <div class="skeleton" style="height:76px"></div>
+      <div class="skeleton" style="height:76px"></div>
+      <div class="skeleton" style="height:76px"></div>
+    </div>
+  </div>
+
+  <!-- ─── PAGE: PIPELINE ─── -->
+  <div id="pg-pipeline" class="page px-4 pt-4">
+    <div class="ff-display font-bold text-xs tracking-wider mb-3" style="color:var(--muted)">PIPELINE KANBAN — Faites défiler →</div>
+    <div class="flex gap-3 overflow-x-auto pb-4" id="pipe-board" style="-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+  <!-- ─── PAGE: HISTORIQUE ─── -->
+  <div id="pg-history" class="page px-4 pt-4">
+    <div class="ff-display font-bold text-xs tracking-wider mb-3" style="color:var(--muted)">HISTORIQUE DES INTERACTIONS</div>
+    <div id="h-list" class="space-y-3"></div>
+    <div id="h-empty" class="hidden text-center py-16">
+      <div style="font-size:52px;margin-bottom:12px">📞</div>
+      <div class="ff-display font-bold text-lg">Aucune interaction</div>
+    </div>
+  </div>
+
+  <!-- ─── PAGE: IA CRM ─── -->
+  <div id="pg-ai" class="page px-4 pt-4 space-y-4">
+    <div class="ai-box">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="text-3xl animate-float">🤖</span>
+        <div>
+          <div class="ff-display font-bold text-xl" style="background:linear-gradient(135deg,#a5b4fc,#bef264);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Module IA CRM</div>
+          <div class="text-xs" style="color:var(--muted)">Automatisation & intelligence commerciale</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-3" style="color:var(--muted)">🎯 PROSPECTS CHAUDS (IA)</div>
+      <div id="hot-list" class="space-y-3"></div>
+    </div>
+
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-4" style="color:var(--muted)">✍️ GÉNÉRATEUR DE MESSAGES</div>
+      <div class="space-y-3">
+        <div><label class="lbl">CONTACT CIBLE</label>
+          <select id="ai-sel" class="inp"><option value="">-- Choisir un contact --</option></select>
+        </div>
+        <div><label class="lbl">FORMAT DU MESSAGE</label>
+          <select id="ai-fmt" class="inp">
+            <option value="email">📧 Email professionnel</option>
+            <option value="sms">💬 SMS court</option>
+            <option value="whatsapp">💚 Message WhatsApp</option>
+          </select>
+        </div>
+        <button onclick="genMsg()" class="btn btn-primary">✨ Générer le Message IA</button>
+      </div>
+    </div>
+
+    <div id="ai-result" class="hidden card">
+      <div class="flex items-center justify-between mb-3">
+        <div class="ff-display font-bold text-xs tracking-wider" style="color:var(--muted)">💬 MESSAGE GÉNÉRÉ</div>
+        <div class="flex gap-2">
+          <button onclick="send('sms')" class="btn-icon" style="background:rgba(99,102,241,.2);font-size:17px;width:40px;height:40px;border-radius:10px">💬</button>
+          <button onclick="send('email')" class="btn-icon" style="background:rgba(132,204,22,.2);font-size:17px;width:40px;height:40px;border-radius:10px">📧</button>
+          <button onclick="send('whatsapp')" class="btn-icon" style="background:rgba(37,211,102,.2);font-size:17px;width:40px;height:40px;border-radius:10px">💚</button>
+        </div>
+      </div>
+      <div id="ai-msg" class="text-sm leading-relaxed p-4 rounded-2xl" style="background:rgba(255,255,255,.04);color:#c7d2fe;white-space:pre-wrap;font-size:13px;line-height:1.65"></div>
+      <button onclick="copyMsg()" class="btn btn-ghost btn-sm mt-3">📋 Copier</button>
+    </div>
+  </div>
+
+  <!-- ─── PAGE: SETTINGS ─── -->
+  <div id="pg-settings" class="page px-4 pt-4 space-y-4">
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-4" style="color:var(--muted)">👤 MON PROFIL</div>
+      <div class="flex items-center gap-4 mb-4">
+        <div style="width:60px;height:60px;border-radius:20px;background:linear-gradient(135deg,rgba(99,102,241,.35),rgba(132,204,22,.2));display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">👤</div>
+        <div>
+          <div class="ff-display font-bold text-base" id="s-name">—</div>
+          <div class="text-sm" style="color:var(--muted)" id="s-email">—</div>
+          <div class="mt-1.5" id="s-role"></div>
+        </div>
+      </div>
+      <button onclick="doSignOut()" class="btn btn-danger btn-sm">🚪 Se déconnecter</button>
+    </div>
+
+    <div id="s-adm-users" class="hidden card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-4" style="color:var(--muted)">⚙️ GESTION UTILISATEURS</div>
+      <div id="users-list" class="space-y-3"></div>
+    </div>
+
+    <div class="card">
+      <div class="ff-display font-bold text-xs tracking-wider mb-4" style="color:var(--muted)">📱 PARAMÈTRES APP</div>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Mode Hors-Ligne</span>
+          <span class="badge b-client">Actif</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Notifications Push</span>
+          <button onclick="askNotif()" class="badge b-lead" style="cursor:pointer;font-family:inherit">Activer</button>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Contacts en attente sync</span>
+          <span class="badge b-prospect" id="pend-count">0</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">Version</span>
+          <span class="text-sm" style="color:var(--muted)">NexCRM 2.1</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="glass fixed bottom-0 left-0 right-0 z-40 flex" style="padding-bottom:var(--safe-bottom)">
+    <div class="nav-tab on" onclick="nav('dashboard')" id="nt-dashboard"><span class="ni">📊</span><span class="nl">Dashboard</span></div>
+    <div class="nav-tab" onclick="nav('contacts')" id="nt-contacts"><span class="ni">👥</span><span class="nl">Contacts</span></div>
+    <div class="nav-tab" onclick="nav('pipeline')" id="nt-pipeline"><span class="ni">🔄</span><span class="nl">Pipeline</span></div>
+    <div class="nav-tab" onclick="nav('history')" id="nt-history"><span class="ni">📞</span><span class="nl">Historique</span></div>
+    <div class="nav-tab" onclick="nav('ai')" id="nt-ai"><span class="ni">🤖</span><span class="nl">IA</span></div>
+    <div class="nav-tab" onclick="nav('settings')" id="nt-settings"><span class="ni">⚙️</span><span class="nl">Profil</span></div>
+  </nav>
+
+  <!-- FAB -->
+  <button class="fab" onclick="openCModal()" id="fab">＋</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════ -->
+
+<!-- Contact Modal -->
+<div id="m-contact" class="overlay hidden">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="ff-display font-bold text-xl" id="m-c-title">Nouveau Contact</h2>
+      <button onclick="closeCModal()" class="btn-icon">✕</button>
+    </div>
+    <div class="space-y-3" id="c-form">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">PRÉNOM</label><input id="fp" type="text" placeholder="Jean" class="inp"/></div>
+        <div><label class="lbl">NOM</label><input id="fn" type="text" placeholder="Dupont" class="inp"/></div>
+      </div>
+      <div><label class="lbl">EMAIL</label><input id="fe" type="email" placeholder="jean@acme.com" class="inp"/></div>
+      <div><label class="lbl">TÉLÉPHONE</label><input id="ft" type="tel" placeholder="+33 6 12 34 56 78" class="inp"/></div>
+      <div><label class="lbl">SOCIÉTÉ</label><input id="fs" type="text" placeholder="Acme Corp" class="inp"/></div>
+      <div><label class="lbl">STATUT</label>
+        <select id="fst" class="inp">
+          <option value="lead">🔵 Lead</option>
+          <option value="prospect">🟡 Prospect</option>
+          <option value="rappel">🟠 À Rappeler</option>
+          <option value="client">🟢 Client</option>
+          <option value="lost">🔴 Pas Intéressé</option>
+        </select>
+      </div>
+      <div><label class="lbl">NOTES</label><textarea id="fno" class="inp" rows="3" placeholder="Notes, contexte…"></textarea></div>
+      <div><label class="lbl">CA ESTIMÉ (€)</label><input id="fca" type="number" placeholder="5000" class="inp"/></div>
+
+      <!-- Edit-only actions -->
+      <div id="m-edit-btns" class="hidden space-y-2">
+        <div class="flex gap-2">
+          <a id="m-call" href="#" class="btn btn-ghost btn-sm flex-1" style="text-decoration:none">📞 Appeler</a>
+          <a id="m-wa"   href="#" class="btn btn-ghost btn-sm flex-1" style="text-decoration:none">💚 WhatsApp</a>
+        </div>
+        <button onclick="openIntModal()" class="btn btn-ghost btn-sm">📝 Enregistrer Interaction</button>
+        <button onclick="genMsgModal()" class="btn btn-ghost btn-sm">🤖 Générer Message IA</button>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="saveC()" class="btn btn-primary flex-1">💾 Sauvegarder</button>
+        <button onclick="deleteC()" id="m-del" class="hidden btn-icon btn-danger" style="width:54px;height:54px;border-radius:14px;font-size:20px">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Inline AI result -->
+    <div id="m-ai-box" class="hidden mt-4 ai-box">
+      <div class="ff-display font-bold text-xs tracking-wider mb-2" style="color:#a5b4fc">MESSAGE IA</div>
+      <div id="m-ai-txt" class="text-sm" style="color:#c7d2fe;white-space:pre-wrap;line-height:1.6"></div>
+      <div class="flex gap-2 mt-3">
+        <button onclick="sendModal('sms')" class="btn btn-ghost btn-sm flex-1">💬 SMS</button>
+        <button onclick="sendModal('email')" class="btn btn-ghost btn-sm flex-1">📧 Email</button>
+        <button onclick="sendModal('whatsapp')" class="btn btn-ghost btn-sm flex-1">💚 WA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interaction Modal -->
+<div id="m-int" class="overlay hidden">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <h2 class="ff-display font-bold text-xl mb-5">📝 Enregistrer Interaction</h2>
+    <div class="space-y-3">
+      <div><label class="lbl">TYPE</label>
+        <select id="it" class="inp">
+          <option value="appel">📞 Appel</option>
+          <option value="email">📧 Email</option>
+          <option value="rdv">🤝 Rendez-vous</option>
+          <option value="whatsapp">💚 WhatsApp</option>
+          <option value="note">📝 Note</option>
+        </select>
+      </div>
+      <div><label class="lbl">RÉSULTAT</label>
+        <select id="ir" class="inp">
+          <option value="positif">✅ Positif — Intéressé</option>
+          <option value="neutre">⚪ Neutre</option>
+          <option value="rappel">🔔 À rappeler</option>
+          <option value="negatif">❌ Pas intéressé</option>
+          <option value="vm">📱 Messagerie vocale</option>
+        </select>
+      </div>
+      <div><label class="lbl">NOTES</label><textarea id="in" class="inp" rows="3" placeholder="Détails de l'échange…"></textarea></div>
+      <div><label class="lbl">DATE DE RAPPEL</label><input id="ird" type="date" class="inp"/></div>
+      <button onclick="saveInt()" class="btn btn-primary">💾 Enregistrer</button>
+      <button onclick="closeInt()" class="btn btn-ghost">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="m-confirm" class="overlay hidden">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <div class="text-center py-4">
+      <div id="conf-ico" style="font-size:52px;margin-bottom:14px">⚠️</div>
+      <h2 class="ff-display font-bold text-xl mb-2" id="conf-title">Confirmation</h2>
+      <p class="text-sm mb-7" style="color:var(--muted)" id="conf-text">Êtes-vous sûr ?</p>
+      <div class="flex gap-3">
+        <button onclick="closeConf()" class="btn btn-ghost flex-1">Annuler</button>
+        <button id="conf-ok" class="btn flex-1" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff">Confirmer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div id="m-profile" class="overlay hidden">
+  <div class="sheet">
+    <div class="drag-bar"></div>
+    <h2 class="ff-display font-bold text-xl mb-5">Mon Profil</h2>
+    <div class="space-y-4">
+      <div class="flex items-center gap-4 p-4 rounded-2xl glass-sm">
+        <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,rgba(99,102,241,.3),rgba(132,204,22,.2));display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">👤</div>
+        <div>
+          <div class="ff-display font-bold" id="pm-name">—</div>
+          <div class="text-sm" style="color:var(--muted)" id="pm-email">—</div>
+          <div id="pm-role" class="mt-1.5"></div>
+        </div>
+      </div>
+      <button onclick="closeProfile();nav('settings')" class="btn btn-ghost">⚙️ Paramètres</button>
+      <button onclick="doSignOut()" class="btn btn-danger">🚪 Déconnexion</button>
+      <button onclick="closeProfile()" class="btn btn-ghost">✕ Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const SB_URL   = 'https://tkikhtpzpixzscpkewlh.supabase.co';
+const SB_KEY   = 'sb_publishable_or9nFB9PectQNg5BFtTrAQ_UuX_tBB2';
+const ADM_EMAIL = 'elaidi.aziz10.if@gmail.com';
+
+const { createClient } = supabase;
+const sb = createClient(SB_URL, SB_KEY);
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let me = null, profile = null, isAdmin = false;
+let contacts = [], filtered = [];
+let statusFilter = 'all';
+let editId = null;
+let pending = JSON.parse(localStorage.getItem('nx_pending') || '[]');
+let online = navigator.onLine;
+let charts = {};
+let confCb = null;
+let modalContact = null;
+let aiContact = null, aiMsg = '';
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) { me = session.user; await loadProfile(); showApp(); }
+  else showAuth();
+
+  sb.auth.onAuthStateChange(async (ev, sess) => {
+    if (ev === 'SIGNED_IN' && sess?.user) { me = sess.user; await loadProfile(); showApp(); }
+    if (ev === 'SIGNED_OUT') { me = null; showAuth(); }
+  });
+
+  window.addEventListener('online',  () => { online = true;  updateOffline(); syncPending(); });
+  window.addEventListener('offline', () => { online = false; updateOffline(); });
+  updateOffline();
+
+  // SW for PWA offline cache
+  if ('serviceWorker' in navigator) {
+    const sw = `self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>clients.claim());self.addEventListener('fetch',e=>e.respondWith(caches.open('nx').then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(res=>{c.put(e.request,res.clone());return res}).catch(()=>new Response('',{status:503}))))));`;
+    const blob = new Blob([sw], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+  }
+})();
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+function switchTab(t) {
+  const isIn = t === 'in';
+  $('f-in').classList.toggle('hidden', !isIn);
+  $('f-up').classList.toggle('hidden', isIn);
+  $('t-in').style.cssText = isIn ? 'background:var(--accent);color:#fff' : 'color:var(--muted)';
+  $('t-up').style.cssText = !isIn ? 'background:var(--accent);color:#fff' : 'color:var(--muted)';
+  $('auth-err').classList.add('hidden');
+}
+
+async function doSignIn() {
+  const email = $('si-email').value.trim();
+  const pass  = $('si-pwd').value;
+  if (!email || !pass) return authErr('Remplissez tous les champs');
+  setBtnLoad('btn-si', 'si-txt', true);
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  setBtnLoad('btn-si', 'si-txt', false, 'Se connecter →');
+  if (error) authErr(error.message);
+}
+
+async function doSignUp() {
+  const name  = $('su-name').value.trim();
+  const email = $('su-email').value.trim();
+  const pass  = $('su-pwd').value;
+  if (!name || !email || !pass) return authErr('Remplissez tous les champs');
+  if (pass.length < 6) return authErr('Mot de passe trop court (min. 6 caractères)');
+  setBtnLoad('btn-su', 'su-txt', true);
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+  setBtnLoad('btn-su', 'su-txt', false, 'Créer mon compte →');
+  if (error) return authErr(error.message);
+  if (data.user) {
+    await sb.from('profiles').upsert({ id: data.user.id, email, full_name: name, role: email === ADM_EMAIL ? 'admin' : 'user', created_at: new Date().toISOString() });
+    toast('✅ Compte créé ! Vérifiez votre email.', 'success');
+    switchTab('in');
+  }
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  contacts = []; filtered = []; me = null; profile = null;
+  closeProfile(); showAuth();
+}
+
+async function loadProfile() {
+  isAdmin = me.email === ADM_EMAIL;
+  const { data } = await sb.from('profiles').select('*').eq('id', me.id).single();
+  profile = data || { id: me.id, email: me.email, full_name: me.user_metadata?.full_name || me.email, role: isAdmin ? 'admin' : 'user' };
+  if (!data) await sb.from('profiles').upsert(profile);
+  if (me.email === ADM_EMAIL) { isAdmin = true; profile.role = 'admin'; }
+}
+
+function authErr(m) { const e = $('auth-err'); e.textContent = m; e.classList.remove('hidden'); }
+function setBtnLoad(bid, tid, loading, txt = '') {
+  const b = $(bid); const t = $(tid);
+  b.disabled = loading;
+  t.innerHTML = loading ? '<span class="loader" style="width:16px;height:16px;border-width:2px"></span>' : txt;
+}
+
+// ─────────────────────────────────────────────
+// SHOW / HIDE
+// ─────────────────────────────────────────────
+function showAuth() { $('auth-screen').classList.remove('hidden'); $('app').classList.add('hidden'); }
+function showApp()  {
+  $('auth-screen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  setupApp();
+  loadContacts();
+}
+
+function setupApp() {
+  const n = profile?.full_name || me.email;
+  const e = me.email;
+  const rb = isAdmin ? '<span class="badge b-admin">⚡ Admin</span>' : '<span class="badge b-lead">Utilisateur</span>';
+  ['s-name','pm-name'].forEach(id => $(id) && ($(id).textContent = n));
+  ['s-email','pm-email'].forEach(id => $(id) && ($(id).textContent = e));
+  ['s-role','pm-role'].forEach(id => $(id) && ($(id).innerHTML = rb));
+  $('avatar-btn').textContent = isAdmin ? '⚡' : '👤';
+  $('adm-zone').classList.toggle('hidden', !isAdmin);
+  $('s-adm-users').classList.toggle('hidden', !isAdmin);
+  setTimeout(checkRappels, 3500);
+  updatePendCount();
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+let curPage = 'dashboard';
+function nav(p) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('on'));
+  $('pg-' + p).classList.add('on');
+  $('nt-' + p).classList.add('on');
+  curPage = p;
+
+  const titles = {
+    dashboard: ['Dashboard', 'Vue globale'],
+    contacts:  ['Contacts', contacts.length + ' contacts'],
+    pipeline:  ['Pipeline', 'Suivi commercial'],
+    history:   ['Historique', 'Interactions'],
+    ai:        ['IA CRM', 'Intelligence artificielle'],
+    settings:  ['Profil', isAdmin ? 'Administrateur' : 'Utilisateur']
+  };
+  const [t, s] = titles[p] || ['NexCRM', ''];
+  $('hdr-title').textContent = t;
+  $('hdr-sub').textContent   = s;
+  $('fab').style.display     = p === 'contacts' ? 'flex' : 'none';
+
+  if (p === 'dashboard') renderDash();
+  if (p === 'pipeline')  renderPipe();
+  if (p === 'history')   loadHistory();
+  if (p === 'ai')        { renderHot(); fillAiSel(); }
+  if (p === 'settings' && isAdmin) loadUsers();
+}
+
+// ─────────────────────────────────────────────
+// OFFLINE
+// ─────────────────────────────────────────────
+function updateOffline() { $('offline-bar').classList.toggle('hidden', online); }
+function savePending()   { localStorage.setItem('nx_pending', JSON.stringify(pending)); updatePendCount(); }
+function updatePendCount() { $('pend-count') && ($('pend-count').textContent = pending.length); }
+
+async function syncPending() {
+  if (!pending.length) return;
+  $('sync-spin').classList.remove('hidden');
+  for (const op of [...pending]) {
+    try {
+      if (op.t === 'upsert') await sb.from('contacts').upsert(op.d);
+      else if (op.t === 'del') await sb.from('contacts').delete().eq('id', op.id);
+      pending = pending.filter(x => x !== op);
+    } catch {}
+  }
+  savePending();
+  $('sync-spin').classList.add('hidden');
+  if (!pending.length) { toast('✅ Synchronisation réussie !', 'success'); loadContacts(); }
+}
+
+// ─────────────────────────────────────────────
+// LOAD CONTACTS
+// ─────────────────────────────────────────────
+async function loadContacts() {
+  $('c-skel').classList.remove('hidden');
+  $('c-list').innerHTML = '';
+  $('c-empty').classList.add('hidden');
+
+  let q = sb.from('contacts').select('*').order('created_at', { ascending: false });
+  if (!isAdmin) q = q.eq('user_id', me.id);
+  const { data, error } = await q;
+  $('c-skel').classList.add('hidden');
+
+  if (error) {
+    const c = localStorage.getItem('nx_contacts');
+    contacts = c ? JSON.parse(c) : [];
+    toast('⚠️ Hors-ligne — données locales chargées', 'warning');
+  } else {
+    contacts = data || [];
+    localStorage.setItem('nx_contacts', JSON.stringify(contacts));
+  }
+  filtered = [...contacts];
+  renderContacts();
+  if (curPage === 'dashboard') renderDash();
+  $('hdr-sub').textContent = contacts.length + ' contacts';
+}
+
+// ─────────────────────────────────────────────
+// RENDER CONTACTS
+// ─────────────────────────────────────────────
+function renderContacts() {
+  const list = $('c-list');
+  list.innerHTML = '';
+  if (!filtered.length) { $('c-empty').classList.remove('hidden'); return; }
+  $('c-empty').classList.add('hidden');
+  filtered.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'crow';
+    d.style.cssText = `animation:pageIn .3s ${i*.03}s cubic-bezier(.16,1,.3,1) both`;
+    d.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div style="width:44px;height:44px;border-radius:14px;background:${sColor(c.status)};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${sEmoji(c.status)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="ff-display font-bold truncate" style="font-size:14.5px">${c.prenom || ''} ${c.nom || ''}</div>
+          <div class="text-xs truncate mt-0.5" style="color:var(--muted)">${c.societe || c.email || '—'}</div>
+          ${c.phone ? `<div class="text-xs mt-0.5" style="color:var(--muted)">📞 ${c.phone}</div>` : ''}
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="badge ${sBadge(c.status)}">${sLabel(c.status)}</span>
+          ${c.ca_estime ? `<span class="text-xs" style="color:#bef264">💰${fNum(c.ca_estime)}€</span>` : ''}
+        </div>
+      </div>`;
+    d.onclick = () => openCModal(c);
+    list.appendChild(d);
+  });
+}
+
+function filterC() {
+  const q = $('srch').value.toLowerCase();
+  filtered = contacts.filter(c => {
+    const ms = statusFilter === 'all' || c.status === statusFilter;
+    const mq = !q || `${c.prenom} ${c.nom} ${c.email} ${c.societe} ${c.phone}`.toLowerCase().includes(q);
+    return ms && mq;
+  });
+  renderContacts();
+}
+
+function setStatus(s, btn) {
+  statusFilter = s;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  filterC();
+}
+
+// ─────────────────────────────────────────────
+// CONTACT MODAL
+// ─────────────────────────────────────────────
+function openCModal(c = null) {
+  editId = c?.id || null;
+  modalContact = c;
+  $('m-c-title').textContent = c ? `${c.prenom || ''} ${c.nom || ''}`.trim() || 'Fiche Contact' : 'Nouveau Contact';
+  $('fp').value  = c?.prenom   || '';
+  $('fn').value  = c?.nom      || '';
+  $('fe').value  = c?.email    || '';
+  $('ft').value  = c?.phone    || '';
+  $('fs').value  = c?.societe  || '';
+  $('fst').value = c?.status   || 'lead';
+  $('fno').value = c?.notes    || '';
+  $('fca').value = c?.ca_estime || '';
+  $('m-edit-btns').classList.toggle('hidden', !c);
+  $('m-del').classList.toggle('hidden', !c || !isAdmin);
+  $('m-ai-box').classList.add('hidden');
+  if (c?.phone) {
+    $('m-call').href = 'tel:' + c.phone;
+    $('m-wa').href   = 'https://wa.me/' + c.phone.replace(/\D/g,'');
+  }
+  showModal('m-contact');
+}
+
+function closeCModal() { hideModal('m-contact'); editId = null; modalContact = null; }
+
+async function saveC() {
+  const c = {
+    prenom: $('fp').value.trim(), nom: $('fn').value.trim(),
+    email: $('fe').value.trim(), phone: $('ft').value.trim(),
+    societe: $('fs').value.trim(), status: $('fst').value,
+    notes: $('fno').value.trim(), ca_estime: parseFloat($('fca').value) || 0,
+    user_id: me.id, updated_at: new Date().toISOString()
+  };
+  if (!c.prenom && !c.nom && !c.email) return toast('⚠️ Remplissez au moins un champ identifiant', 'warning');
+  if (editId) c.id = editId; else c.created_at = new Date().toISOString();
+
+  if (online) {
+    const { data, error } = await sb.from('contacts').upsert(c).select().single();
+    if (error) { addPending({ t:'upsert', d: c }); toast('📱 Sauvegardé localement', 'warning'); }
+    else {
+      toast('✅ Contact sauvegardé !', 'success');
+      mergeContact(data || c);
+    }
+  } else {
+    c.id = c.id || 'local_' + Date.now();
+    addPending({ t:'upsert', d: c });
+    mergeContact(c);
+    toast('📱 Sauvegardé localement (hors-ligne)', 'warning');
+  }
+  filtered = [...contacts];
+  filterC();
+  if (curPage === 'dashboard') renderDash();
+  closeCModal();
+}
+
+function mergeContact(c) {
+  const i = contacts.findIndex(x => x.id === c.id);
+  if (i >= 0) contacts[i] = c; else contacts.unshift(c);
+}
+
+function addPending(op) { pending.push(op); savePending(); }
+
+async function deleteC() {
+  if (!editId || !isAdmin) return toast('❌ Action réservée à l\'Admin', 'error');
+  showConfirm('🗑️ Supprimer ce contact ?', 'Cette action est irréversible.', async () => {
+    const { error } = await sb.from('contacts').delete().eq('id', editId);
+    if (!error) {
+      contacts = contacts.filter(x => x.id !== editId);
+      filtered = [...contacts];
+      filterC();
+      if (curPage === 'dashboard') renderDash();
+      toast('🗑️ Contact supprimé', 'success');
+      closeCModal();
+    } else toast('❌ ' + error.message, 'error');
+  });
+}
+
+// ─────────────────────────────────────────────
+// INTERACTIONS
+// ─────────────────────────────────────────────
+function openIntModal() {
+  const d = new Date(); d.setDate(d.getDate() + 7);
+  $('ird').value = d.toISOString().split('T')[0];
+  $('in').value = ''; $('it').value = 'appel'; $('ir').value = 'positif';
+  showModal('m-int');
+}
+function closeInt() { hideModal('m-int'); }
+
+async function saveInt() {
+  if (!editId) { toast('⚠️ Ouvrez d\'abord une fiche contact', 'warning'); return; }
+  const int = {
+    contact_id: editId, user_id: me.id,
+    type: $('it').value, result: $('ir').value,
+    notes: $('in').value, rappel_date: $('ird').value || null,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('interactions').insert(int);
+  if (error) { addPending({ t:'interaction', d: int }); toast('📱 Sauvegardée localement', 'warning'); }
+  else toast('✅ Interaction enregistrée !', 'success');
+
+  if (int.result === 'rappel') {
+    await sb.from('contacts').update({ status:'rappel', updated_at: new Date().toISOString() }).eq('id', editId);
+    const c = contacts.find(x => x.id === editId);
+    if (c) { c.status = 'rappel'; filterC(); }
+  }
+  closeInt();
+}
+
+async function loadHistory() {
+  $('h-list').innerHTML = '';
+  $('h-empty').classList.add('hidden');
+  let q = sb.from('interactions').select('*, contacts(prenom,nom,societe)').order('created_at', { ascending: false }).limit(60);
+  if (!isAdmin) q = q.eq('user_id', me.id);
+  const { data, error } = await q;
+  if (error || !data?.length) { $('h-empty').classList.remove('hidden'); return; }
+  data.forEach((int, i) => {
+    const c = int.contacts;
+    const d = document.createElement('div');
+    d.className = 'card';
+    d.style.cssText = `animation:pageIn .3s ${i*.04}s cubic-bezier(.16,1,.3,1) both;margin-bottom:10px`;
+    d.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span style="font-size:20px">${tEmoji(int.type)}</span>
+          <div>
+            <div class="ff-display font-bold text-sm">${c ? (c.prenom||'')+' '+(c.nom||'') : 'Contact supprimé'}</div>
+            ${c?.societe ? `<div class="text-xs" style="color:var(--muted)">${c.societe}</div>` : ''}
+          </div>
+        </div>
+        <span class="badge ${rBadge(int.result)}">${int.result}</span>
+      </div>
+      ${int.notes ? `<div class="text-xs p-2.5 rounded-xl" style="background:rgba(255,255,255,.04);color:#94a3b8">${int.notes}</div>` : ''}
+      <div class="flex justify-between mt-2.5">
+        <span class="text-xs" style="color:var(--muted)">${fDate(int.created_at)}</span>
+        ${int.rappel_date ? `<span class="text-xs" style="color:#fdba74">🔔 ${int.rappel_date}</span>` : ''}
+      </div>`;
+    $('h-list').appendChild(d);
+  });
+}
+
+// ─────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────
+function renderDash() {
+  const total   = contacts.length;
+  const clients = contacts.filter(c => c.status === 'client').length;
+  const conv    = total ? Math.round(clients/total*100) : 0;
+  const ca      = contacts.reduce((s,c) => s+(c.ca_estime||0), 0);
+  const rappels = contacts.filter(c => c.status === 'rappel');
+
+  $('k-total').textContent   = total;
+  $('k-clients').textContent = clients;
+  $('k-conv').textContent    = conv + '%';
+  $('k-prog').style.width    = conv + '%';
+  $('k-ca').textContent      = ca >= 1000 ? (ca/1000).toFixed(1)+'k€' : ca+'€';
+  $('rc-badge').textContent  = rappels.length;
+
+  // Rappels list
+  $('rappels-list').innerHTML = rappels.slice(0,4).map(c => `
+    <div class="flex items-center justify-between p-3.5 rounded-2xl cursor-pointer" style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.2)" onclick='openCModal(${jenc(c)})'>
+      <div>
+        <div class="ff-display font-semibold text-sm">${c.prenom||''} ${c.nom||''}</div>
+        <div class="text-xs" style="color:var(--muted)">${c.societe||c.phone||'—'}</div>
+      </div>
+      <span style="font-size:22px">📞</span>
+    </div>`).join('');
+
+  drawPipe();
+  drawAct();
+  renderAISuggest();
+}
+
+function drawPipe() {
+  const ctx = $('ch-pipe');
+  if (!ctx) return;
+  if (charts.pipe) charts.pipe.destroy();
+  const ss = ['lead','prospect','rappel','client','lost'];
+  const ls = ['Lead','Prospect','À Rappeler','Client','Perdu'];
+  const cs = ['#6366f1','#f59e0b','#f97316','#84cc16','#f43f5e'];
+  const vals = ss.map(s => contacts.filter(c=>c.status===s).length);
+  charts.pipe = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ls, datasets: [{ data: vals, backgroundColor: cs.map(c=>c+'cc'), borderColor: cs, borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { position:'right', labels:{ color:'#94a3b8', font:{ size:11, family:'Plus Jakarta Sans' }, boxWidth:11 } } }
+    }
+  });
+}
+
+function drawAct() {
+  const ctx = $('ch-act');
+  if (!ctx) return;
+  if (charts.act) charts.act.destroy();
+  const days=[], vals=[];
+  for (let i=6;i>=0;i--) {
+    const d=new Date(); d.setDate(d.getDate()-i);
+    days.push(d.toLocaleDateString('fr',{weekday:'short'}));
+    const ds=d.toISOString().split('T')[0];
+    vals.push(contacts.filter(c=>(c.created_at||'').startsWith(ds)||(c.updated_at||'').startsWith(ds)).length);
+  }
+  charts.act = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:days, datasets:[{ label:'Activité', data:vals, backgroundColor:'rgba(99,102,241,.45)', borderColor:'#6366f1', borderWidth:2, borderRadius:8 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{ color:'rgba(255,255,255,.05)' }, ticks:{ color:'#64748b', font:{ size:11 } } },
+        y:{ grid:{ color:'rgba(255,255,255,.05)' }, ticks:{ color:'#64748b', stepSize:1 } }
+      }
+    }
+  });
+}
+
+function renderAISuggest() {
+  const hot = contacts.filter(c=>c.status==='rappel'||c.status==='prospect').sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0))[0];
+  const el = $('ai-suggest');
+  if (!hot) { el.textContent = '✅ Tous vos prospects sont à jour. Continuez à alimenter votre pipeline !'; return; }
+  el.innerHTML = `
+    <div class="ff-display font-semibold mb-1" style="color:#a5b4fc">🎯 ${hot.prenom||''} ${hot.nom||''} — ${hot.societe||'Contact'}</div>
+    <div class="text-xs mb-2" style="color:#94a3b8">Statut : ${sLabel(hot.status)} · Dernière activité : ${fDate(hot.updated_at)}</div>
+    <div style="color:#c7d2fe;font-size:12.5px">Ce contact est la priorité n°1. Une relance maintenant augmente le taux de conversion de <strong style="color:#bef264">+34%</strong> selon les données de votre pipeline.</div>
+    <div class="flex gap-2 mt-3">
+      ${hot.phone?`<a href="tel:${hot.phone}" class="btn btn-ghost btn-sm flex-1" style="text-decoration:none">📞 Appeler</a>`:''}
+      <button onclick='openCModal(${jenc(hot)})' class="btn btn-ghost btn-sm flex-1">👁️ Voir fiche</button>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
+// PIPELINE BOARD
+// ─────────────────────────────────────────────
+function renderPipe() {
+  const board = $('pipe-board');
+  board.innerHTML = '';
+  const stages = [
+    {k:'lead',l:'🔵 Lead',c:'#6366f1'},
+    {k:'prospect',l:'🟡 Prospect',c:'#f59e0b'},
+    {k:'rappel',l:'🟠 À Rappeler',c:'#f97316'},
+    {k:'client',l:'🟢 Client',c:'#84cc16'},
+    {k:'lost',l:'🔴 Perdu',c:'#f43f5e'}
+  ];
+  stages.forEach(st => {
+    const cs = contacts.filter(c=>c.status===st.k);
+    const col = document.createElement('div');
+    col.className = 'pipe-col';
+    col.innerHTML = `
+      <div class="flex items-center justify-between p-3 rounded-2xl mb-2.5" style="background:${st.c}1a;border:1px solid ${st.c}3a">
+        <span class="ff-display font-bold text-sm">${st.l}</span>
+        <span class="badge" style="background:${st.c}2a;color:${st.c};border:1px solid ${st.c}4a">${cs.length}</span>
+      </div>
+      <div class="space-y-2">
+        ${cs.map(c=>`
+          <div class="crow" onclick='openCModal(${jenc(c)})' style="border-color:${st.c}2a">
+            <div class="ff-display font-semibold text-sm">${c.prenom||''} ${c.nom||''}</div>
+            <div class="text-xs mt-0.5" style="color:var(--muted)">${c.societe||'—'}</div>
+            ${c.ca_estime?`<div class="text-xs mt-1" style="color:#bef264">💰 ${fNum(c.ca_estime)}€</div>`:''}
+            ${c.phone?`<a href="tel:${c.phone}" class="text-xs mt-1 block" style="color:#a5b4fc" onclick="event.stopPropagation()">📞 ${c.phone}</a>`:''}
+          </div>`).join('')}
+        ${!cs.length?'<div class="text-center py-6 text-xs" style="color:var(--muted)">Aucun contact</div>':''}
+      </div>`;
+    board.appendChild(col);
+  });
+}
+
+// ─────────────────────────────────────────────
+// AI MODULE
+// ─────────────────────────────────────────────
+function renderHot() {
+  const hot = contacts.filter(c=>c.status==='rappel'||c.status==='prospect').sort((a,b)=>new Date(b.updated_at||0)-new Date(a.updated_at||0)).slice(0,5);
+  const el = $('hot-list');
+  if (!hot.length) { el.innerHTML = '<div class="text-sm text-center py-4" style="color:var(--muted)">Aucun prospect chaud détecté</div>'; return; }
+  el.innerHTML = hot.map((c,i)=>`
+    <div class="flex items-center gap-3 p-3 rounded-2xl card-hover" style="background:rgba(255,255,255,.03);border:1px solid var(--border)">
+      <div style="font-size:22px">${'🥇🥈🥉4️⃣5️⃣'[i*2]}${i>2?'️⃣':''}</div>
+      <div class="flex-1 min-w-0">
+        <div class="ff-display font-semibold text-sm truncate">${c.prenom||''} ${c.nom||''}</div>
+        <div class="text-xs truncate" style="color:var(--muted)">${c.societe||c.email||'—'} · ${sLabel(c.status)}</div>
+      </div>
+      <div class="flex gap-1">
+        ${c.phone?`<a href="tel:${c.phone}" class="btn-icon" style="background:rgba(99,102,241,.2);font-size:17px;width:38px;height:38px;border-radius:10px" onclick="event.stopPropagation()">📞</a>`:''}
+        <button onclick='openCModal(${jenc(c)})' class="btn-icon" style="background:rgba(255,255,255,.06);font-size:14px;width:38px;height:38px;border-radius:10px">👁️</button>
+      </div>
+    </div>`).join('');
+}
+
+function fillAiSel() {
+  const sel = $('ai-sel');
+  sel.innerHTML = '<option value="">-- Choisir un contact --</option>';
+  contacts.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = `${c.prenom||''} ${c.nom||''} — ${c.societe||c.email||''}`;
+    sel.appendChild(o);
+  });
+}
+
+async function genMsg() {
+  const id  = $('ai-sel').value;
+  const fmt = $('ai-fmt').value;
+  if (!id) return toast('⚠️ Choisissez un contact', 'warning');
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  $('ai-result').classList.remove('hidden');
+  $('ai-msg').innerHTML = '<span class="loader" style="width:14px;height:14px;border-width:2px"></span> Génération…';
+  await delay(700);
+  aiContact = c;
+  aiMsg = buildMsg(c, fmt);
+  $('ai-msg').textContent = aiMsg;
+}
+
+function send(ch) { if (aiContact && aiMsg) doSend(ch, aiContact, aiMsg); }
+function sendModal(ch) {
+  const c = modalContact || aiContact;
+  const m = $('m-ai-txt')?.textContent || aiMsg;
+  if (c && m) doSend(ch, c, m);
+}
+
+function doSend(ch, c, msg) {
+  const phone = (c.phone||'').replace(/\D/g,'');
+  const email = c.email || '';
+  const enc   = encodeURIComponent(msg);
+  if (ch==='whatsapp'&&phone) window.open(`https://wa.me/${phone}?text=${enc}`,'_blank');
+  else if (ch==='sms'&&phone) window.open(`sms:${phone}?body=${enc}`,'_blank');
+  else if (ch==='email'&&email) window.open(`mailto:${email}?subject=Message&body=${enc}`,'_blank');
+  else { navigator.clipboard.writeText(msg).then(()=>toast('📋 Copié !','success')); }
+}
+
+function copyMsg() { navigator.clipboard.writeText($('ai-msg')?.textContent||aiMsg||'').then(()=>toast('📋 Copié !','success')); }
+
+async function genMsgModal() {
+  if (!modalContact) return;
+  $('m-ai-box').classList.remove('hidden');
+  $('m-ai-txt').innerHTML = '<span class="loader" style="width:13px;height:13px;border-width:2px"></span>';
+  await delay(600);
+  const msg = buildMsg(modalContact, 'whatsapp');
+  $('m-ai-txt').textContent = msg;
+  aiContact = modalContact; aiMsg = msg;
+}
+
+function buildMsg(c, type) {
+  const name = (c.prenom || c.nom || 'vous').trim();
+  const co   = c.societe ? ` chez ${c.societe}` : '';
+  const st   = ['lead','prospect','rappel','client'].includes(c.status) ? c.status : 'lead';
+  const who  = profile?.full_name || 'Notre équipe';
+
+  const T = {
+    email: {
+      lead:     `Objet : Découvrez comment nous pouvons vous aider\n\nBonjour ${name},\n\nJ'espère que vous allez bien. Je me permets de vous contacter car votre profil${co} a retenu toute notre attention.\n\nNous aidons des entreprises à maximiser leur performance commerciale avec des solutions sur-mesure. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?\n\nDans l'attente de votre retour,\n${who}`,
+      prospect: `Objet : Suite à notre dernier échange\n\nBonjour ${name},\n\nJe reviens vers vous suite à notre précédente conversation. Avez-vous eu l'occasion de réfléchir à notre proposition ?\n\nJe reste entièrement disponible pour personnaliser notre offre selon vos besoins${co}.\n\nCordialement,\n${who}`,
+      rappel:   `Objet : Rappel — Je reviens vers vous\n\nBonjour ${name},\n\nComme convenu, je me permets de vous recontacter. Avez-vous avancé dans votre réflexion ?\n\nN'hésitez pas, je suis là pour vous aider.\n\nBien cordialement,\n${who}`,
+      client:   `Objet : Merci pour votre confiance\n\nBonjour ${name},\n\nMerci d'être parmi nos clients${co}. Votre satisfaction est notre priorité absolue.\n\nN'hésitez pas à nous faire part de vos retours ou besoins additionnels.\n\nÀ bientôt,\n${who}`
+    },
+    sms: {
+      lead:     `Bonjour ${name} ! Je me permets de vous contacter — votre profil${co} nous a intéressés. Avez-vous 15min cette semaine pour un échange rapide ? Répondez pour convenir d'un moment. ${who}`,
+      prospect: `Bonjour ${name}, suite à notre échange, avez-vous pu réfléchir à notre proposition ? Dispo pour toute question ! ${who}`,
+      rappel:   `Bonjour ${name}, comme prévu je vous recontacte ! Quand êtes-vous disponible pour avancer ensemble ? 😊 ${who}`,
+      client:   `Bonjour ${name}, comment se passe votre expérience avec nous ? Votre avis compte vraiment ! N'hésitez pas à nous écrire. ${who}`
+    },
+    whatsapp: {
+      lead:     `Bonjour ${name} 👋\n\nJe me permets de vous contacter car votre profil${co} a retenu notre attention.\n\nNous accompagnons des entreprises comme la vôtre dans leur développement commercial.\n\nAuriez-vous 15 minutes cette semaine pour découvrir ce que nous proposons ?\n\nMerci d'avance 🙏\n*${who}*`,
+      prospect: `Bonjour ${name} 😊\n\nSuite à notre dernier échange, je voulais savoir si vous aviez pu avancer dans votre réflexion ?\n\nJe suis là pour adapter notre proposition à vos besoins${co}.\n\nÀ bientôt ! 🚀\n*${who}*`,
+      rappel:   `Bonjour ${name} 👋\n\nComme convenu, je reviens vers vous ! Comment puis-je vous aider à avancer ?\n\nJe suis disponible à tout moment 😊\n*${who}*`,
+      client:   `Bonjour ${name} ⭐\n\nMerci d'être notre client${co} ! Votre satisfaction est notre fierté.\n\nN'hésitez pas si vous avez le moindre besoin 💪\n*${who}*`
+    }
+  };
+  return T[type]?.[st] || T.email.lead;
+}
+
+// ─────────────────────────────────────────────
+// IMPORT
+// ─────────────────────────────────────────────
+function trigImport() { $('imp-file').click(); }
+
+async function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  toast('📂 Lecture du fichier…', 'info');
+  const ext = file.name.split('.').pop().toLowerCase();
+  let rows = [];
+  if (ext==='csv'||ext==='txt') rows = parseCSV(await file.text());
+  else if (ext==='xlsx'||ext==='xls') rows = await parseXLSX(file);
+
+  if (!rows.length) return toast('⚠️ Aucune donnée trouvée dans le fichier', 'warning');
+  toast(`📥 ${rows.length} ligne(s) détectée(s), import…`, 'info');
+
+  const toIns = rows.map(r => ({
+    prenom:    r.prenom||r.Prenom||r['Prénom']||r.firstname||r['First Name']||r.name||'',
+    nom:       r.nom||r.Nom||r.lastname||r['Last Name']||'',
+    email:     r.email||r.Email||r['E-mail']||r.mail||'',
+    phone:     r.phone||r.Phone||r.Telephone||r['Téléphone']||r.tel||r.mobile||'',
+    societe:   r.societe||r.Societe||r.Société||r.Company||r.company||r.entreprise||'',
+    status:    normStatus(r.status||r.Status||r.Statut||'lead'),
+    notes:     r.notes||r.Notes||r.commentaire||'',
+    ca_estime: parseFloat(r.ca||r.CA||r['CA Estimé']||r.revenue||0)||0,
+    user_id:   me.id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+
+  if (online) {
+    const { data, error } = await sb.from('contacts').insert(toIns).select();
+    if (error) toast('❌ Erreur import : '+error.message, 'error');
+    else {
+      contacts.unshift(...(data||[]));
+      filtered = [...contacts];
+      filterC();
+      if (curPage==='dashboard') renderDash();
+      toast(`✅ ${toIns.length} contacts importés !`, 'success');
+    }
+  } else {
+    toIns.forEach(c => { c.id='local_'+Date.now()+Math.random(); addPending({t:'upsert',d:c}); });
+    contacts.unshift(...toIns);
+    filtered = [...contacts];
+    filterC();
+    toast(`📱 ${toIns.length} contacts en attente de sync`, 'warning');
+  }
+  e.target.value = '';
+}
+
+function parseCSV(txt) {
+  const lines = txt.split(/\r?\n/).filter(l=>l.trim());
+  if (!lines.length) return [];
+  const sep = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',';
+  const hdrs = lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(l => {
+    const vals = l.split(sep).map(v=>v.trim().replace(/^"|"$/g,''));
+    const o = {};
+    hdrs.forEach((h,i)=>o[h]=vals[i]||'');
+    return o;
+  });
+}
+
+function parseXLSX(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => {
+      const wb = XLSX.read(e.target.result,{type:'binary'});
+      res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}));
+    };
+    r.readAsBinaryString(file);
+  });
+}
+
+function normStatus(s) {
+  s = (s||'').toLowerCase();
+  if (s.includes('client')||s.includes('won')) return 'client';
+  if (s.includes('prospect')) return 'prospect';
+  if (s.includes('rappel')||s.includes('call back')) return 'rappel';
+  if (s.includes('perdu')||s.includes('lost')||s.includes('non')||s.includes('no')) return 'lost';
+  return 'lead';
+}
+
+// ─────────────────────────────────────────────
+// EXPORT XLSX
+// ─────────────────────────────────────────────
+async function exportXLSX() {
+  if (!isAdmin) return toast('❌ Réservé à l\'Admin', 'error');
+  toast('📥 Génération du fichier…', 'info');
+  const { data, error } = await sb.from('contacts').select('*').order('created_at',{ascending:false});
+  if (error) return toast('❌ Erreur export', 'error');
+  const rows = (data||[]).map(c=>({
+    'Prénom':c.prenom||'','Nom':c.nom||'','Email':c.email||'','Téléphone':c.phone||'',
+    'Société':c.societe||'','Statut':sLabel(c.status),'CA Estimé (€)':c.ca_estime||0,
+    'Notes':c.notes||'','Créé le':fDate(c.created_at),'Modifié le':fDate(c.updated_at)
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'NexCRM');
+  XLSX.writeFile(wb, `NexCRM_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('✅ Export réussi !', 'success');
+}
+
+// ─────────────────────────────────────────────
+// ADMIN — USERS
+// ─────────────────────────────────────────────
+async function loadUsers() {
+  const { data } = await sb.from('profiles').select('*');
+  if (!data) return;
+  $('users-list').innerHTML = (data||[]).map(u=>`
+    <div class="flex items-center justify-between p-3 rounded-2xl glass-sm">
+      <div>
+        <div class="ff-display font-semibold text-sm">${u.full_name||u.email}</div>
+        <div class="text-xs" style="color:var(--muted)">${u.email}</div>
+      </div>
+      <select class="inp" style="width:auto;padding:7px 30px 7px 10px;font-size:12px" onchange="setRole('${u.id}',this.value)" ${u.email===ADM_EMAIL?'disabled':''}>
+        <option value="user" ${u.role!=='admin'?'selected':''}>Utilisateur</option>
+        <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+      </select>
+    </div>`).join('');
+}
+
+async function setRole(uid, role) {
+  const { error } = await sb.from('profiles').update({role}).eq('id',uid);
+  if (error) toast('❌ Erreur','error'); else toast('✅ Rôle mis à jour','success');
+}
+
+// ─────────────────────────────────────────────
+// CONFIRM / NUKE
+// ─────────────────────────────────────────────
+function confirmNuke() {
+  if (!isAdmin) return;
+  showConfirm('⚠️ SUPPRIMER TOUTE LA BASE ?', 'Tous les contacts seront définitivement effacés. Action irréversible.', async () => {
+    const { error } = await sb.from('contacts').delete().neq('id','00000000-0000-0000-0000-000000000000');
+    if (error) toast('❌ '+error.message,'error');
+    else { contacts=[]; filtered=[]; filterC(); renderDash(); toast('🗑️ Base réinitialisée','success'); }
+  });
+}
+
+function showConfirm(title, text, cb) {
+  $('conf-title').textContent = title;
+  $('conf-text').textContent  = text;
+  confCb = cb;
+  showModal('m-confirm');
+}
+function closeConf() { hideModal('m-confirm'); confCb=null; }
+$('conf-ok').onclick = () => { if(confCb) confCb(); closeConf(); };
+
+// ─────────────────────────────────────────────
+// PROFILE MODAL
+// ─────────────────────────────────────────────
+function openProfile()  { showModal('m-profile'); }
+function closeProfile() { hideModal('m-profile'); }
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+function toast(msg, type='info') {
+  const map = {
+    success: 'background:linear-gradient(135deg,rgba(132,204,22,.22),rgba(132,204,22,.1));border:1px solid rgba(132,204,22,.35)',
+    error:   'background:linear-gradient(135deg,rgba(244,63,94,.22),rgba(244,63,94,.1));border:1px solid rgba(244,63,94,.35)',
+    warning: 'background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(245,158,11,.1));border:1px solid rgba(245,158,11,.35)',
+    info:    'background:linear-gradient(135deg,rgba(99,102,241,.22),rgba(99,102,241,.1));border:1px solid rgba(99,102,241,.35)'
+  };
+  const el = document.createElement('div');
+  el.className = 'toast glass';
+  el.style.cssText = map[type]||map.info;
+  el.innerHTML = `<div class="text-sm font-semibold" style="color:var(--text)">${msg}</div>`;
+  $('toasts').appendChild(el);
+  setTimeout(()=>{ el.classList.add('toast-out'); setTimeout(()=>el.remove(),320); }, 3600);
+}
+
+function checkRappels() {
+  const n = contacts.filter(c=>c.status==='rappel').length;
+  if (n > 0) toast(`🔔 ${n} contact${n>1?'s':''} à rappeler !`, 'warning');
+}
+
+async function askNotif() {
+  if (!('Notification' in window)) return toast('Notifications non supportées','warning');
+  const p = await Notification.requestPermission();
+  if (p==='granted') {
+    toast('✅ Notifications activées !','success');
+    new Notification('NexCRM ⚡', { body: 'Vous recevrez vos rappels de prospection.' });
+  } else toast('Notifications refusées','warning');
+}
+
+// ─────────────────────────────────────────────
+// MODAL HELPERS
+// ─────────────────────────────────────────────
+function showModal(id) { $(id).classList.remove('hidden'); document.body.style.overflow='hidden'; }
+function hideModal(id) { $(id).classList.add('hidden'); document.body.style.overflow=''; }
+
+['m-contact','m-int','m-confirm','m-profile'].forEach(id => {
+  $(id).addEventListener('click', function(e) {
+    if (e.target === this) { hideModal(id); document.body.style.overflow=''; if(id==='m-contact'){editId=null;modalContact=null;} }
+  });
+});
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const jenc = o => JSON.stringify(o).replace(/'/g,"\\'");
+const delay = ms => new Promise(r => setTimeout(r, ms));
+const fNum  = n => n>=1000?(n/1000).toFixed(1)+'k':n;
+const fDate = d => d ? new Date(d).toLocaleDateString('fr',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+function sColor(s) {
+  return {lead:'rgba(99,102,241,.2)',prospect:'rgba(245,158,11,.2)',client:'rgba(132,204,22,.2)',lost:'rgba(244,63,94,.2)',rappel:'rgba(249,115,22,.2)'}[s]||'rgba(255,255,255,.06)';
+}
+function sEmoji(s) { return {lead:'🔵',prospect:'🟡',client:'🟢',lost:'🔴',rappel:'🟠'}[s]||'⚪'; }
+function sBadge(s) { return {lead:'b-lead',prospect:'b-prospect',client:'b-client',lost:'b-lost',rappel:'b-rappel'}[s]||'b-lead'; }
+function sLabel(s) { return {lead:'Lead',prospect:'Prospect',client:'Client',lost:'Perdu',rappel:'À Rappeler'}[s]||s||'—'; }
+function tEmoji(t) { return {appel:'📞',email:'📧',rdv:'🤝',whatsapp:'💚',note:'📝'}[t]||'📋'; }
+function rBadge(r) { return {positif:'b-client',negatif:'b-lost',neutre:'b-lead',rappel:'b-rappel',vm:'b-prospect'}[r]||'b-lead'; }
+
+// Init FAB visibility
+$('fab').style.display = 'none';
+</script>
+</body>
+</html>
